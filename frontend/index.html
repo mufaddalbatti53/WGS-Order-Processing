@@ -1991,17 +1991,15 @@ function setBtnLoading(id, loading, label) {
 
 // ── TAB SWITCHER ──────────────────────────────────────────
 function switchTab(tab) {
-  // Show/hide slug field (not needed during registration)
-  const sf = document.getElementById('slugField');
-  if (sf) sf.style.display = (tab === 'reg') ? 'none' : '';
   ['pwd','otp','google','reg'].forEach(t => {
     const tabEl   = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
     const panelEl = document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1));
     if (tabEl)   tabEl.classList.toggle('active', t===tab);
     if (panelEl) panelEl.style.display = t===tab ? 'block' : 'none';
   });
+  // Hide slug field on Register tab (not needed there)
   const sf = document.getElementById('slugField');
-  if (sf) sf.style.display = tab==='reg' ? 'none' : '';
+  if (sf) sf.style.display = tab === 'reg' ? 'none' : '';
   document.getElementById('authAlert').style.display = 'none';
 }
 
@@ -2912,7 +2910,6 @@ document.getElementById('wbDate').textContent = new Date().toLocaleDateString('e
 
 
 // ── COMPANY REGISTRATION ──────────────────────────────────
-function switchToRegister() { switchTab('pwd'); }
 
 
 
