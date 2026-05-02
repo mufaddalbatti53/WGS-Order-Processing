@@ -31,11 +31,16 @@ router.post('/', adminOnly, async (req, res) => {
     const { name, company, email, phone, address, credit_status, pending_amount, notes } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Client name required' });
     const c = await Client.create({
-      company_id: req.company_id,
-      name: name.trim(), company: company || '', email: email || '', phone: phone || '',
-      address: address || '', credit_status: credit_status || 'good',
-      pending_amount: parseFloat(pending_amount) || 0, notes: notes || '',
-      created_by: req.user._id,
+      company_id:     req.company_id,
+      name:           name.trim(),
+      company:        company || '',
+      email:          email || '',
+      phone:          phone || '',
+      address:        address || '',
+      credit_status:  credit_status || 'good',
+      pending_amount: parseFloat(pending_amount) || 0,
+      notes:          notes || '',
+      created_by:     req.user._id,
     });
     res.status(201).json({ ...c.toObject(), id: c._id });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -48,9 +53,14 @@ router.put('/:id', adminOnly, async (req, res) => {
     const { name, company, email, phone, address, credit_status, pending_amount, notes } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Client name required' });
     const updated = await Client.findByIdAndUpdate(c._id, {
-      name: name.trim(), company: company || '', email: email || '', phone: phone || '',
-      address: address || '', credit_status: credit_status || 'good',
-      pending_amount: parseFloat(pending_amount) || 0, notes: notes || '',
+      name:           name.trim(),
+      company:        company || '',
+      email:          email || '',
+      phone:          phone || '',
+      address:        address || '',
+      credit_status:  credit_status || 'good',
+      pending_amount: parseFloat(pending_amount) || 0,
+      notes:          notes || '',
     }, { new: true }).lean();
     res.json({ ...updated, id: updated._id });
   } catch(e) { res.status(500).json({ error: e.message }); }

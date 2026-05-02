@@ -33,6 +33,10 @@ args = "Start application"
 task = "workflow.run"
 args = "npm install"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "npx nodemon server.js"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -52,6 +56,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm install"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "npx nodemon server.js"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx nodemon server.js"
 
 [workflows.workflow.metadata]
 isValidation = true
