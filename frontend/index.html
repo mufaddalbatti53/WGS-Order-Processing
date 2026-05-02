@@ -1860,7 +1860,7 @@ html, body { height: 100%; overflow: hidden; }
 //   const API = 'https://yourdomain.com/api';
 //   or if backend runs on same domain subfolder:
 //   const API = '/api';
-const API = window.ORDERFLOW_API || 'http://localhost:3000/api';
+const API = window.ORDERFLOW_API || '/api';
 
 let TOKEN = localStorage.getItem('of_token') || null;
 
@@ -1961,7 +1961,7 @@ function closeM(id) { document.getElementById(id).classList.remove('show'); }
 // ================================================================
 
 // ✅ SET YOUR RENDER URL HERE (after deploying backend):
-  const API_BASE = 'https://your-wgs-backend.onrender.com/api';
+  const API_BASE = '/api';
 // Example: const API_BASE = 'https://wgs-order-processing.onrender.com/api';
 
 // Company slug - loaded after login/register
