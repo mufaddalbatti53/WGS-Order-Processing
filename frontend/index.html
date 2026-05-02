@@ -3,8 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OrderFlow — Order Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>WGS Order Processing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
@@ -84,7 +84,7 @@
       --r2: 14px;
       --r3: 18px;
       --sidebar-w: 248px;
-      --topbar-h: 76px;
+      --topbar-h: 60px;
       --t: 0.2s ease;
     }
 
@@ -137,15 +137,16 @@
    AUTH SCREEN
    ============================================================= */
     #authScreen {
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(145deg, #dbeeff 0%, #eef8ff 40%, #f0f9ff 70%, #e4f2ff 100%);
-      padding: 20px;
+      background: linear-gradient(145deg, #ede8f7 0%, #eef4fb 40%, #f0f4ff 70%, #e8eef8 100%);
+      padding: clamp(12px, 3vw, 24px);
       position: fixed;
       inset: 0;
       z-index: 1000;
+      overflow-y: auto;
     }
 
     .auth-bg-circles {
@@ -158,7 +159,7 @@
     .auth-circle {
       position: absolute;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.12), transparent 70%);
+      background: radial-gradient(circle, rgba(91, 45, 142, 0.10), transparent 70%);
     }
 
     .auth-circle-1 {
@@ -188,9 +189,11 @@
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.8);
       border-radius: var(--r3);
-      padding: 44px 40px;
+      padding: clamp(20px, 4vw, 40px) clamp(18px, 4vw, 38px);
       width: 100%;
-      max-width: 440px;
+      max-width: min(440px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
       box-shadow: var(--shadow-xl), 0 0 0 1px rgba(14, 165, 233, 0.08);
       animation: authIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
@@ -209,29 +212,30 @@
 
     .auth-logo {
       text-align: center;
-      margin-bottom: 36px;
+      margin-bottom: clamp(16px, 3vh, 30px);
     }
 
     .auth-logo-icon {
-      width: 68px;
-      height: 68px;
-      background: linear-gradient(135deg, var(--sky-d), var(--blue-700));
+      width: 80px;
+      height: 80px;
+      background: transparent;
       border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 30px;
       margin: 0 auto 14px;
-      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.3), 0 0 0 6px rgba(2, 132, 199, 0.08);
+      box-shadow: 0 8px 24px rgba(91, 45, 142, 0.2), 0 0 0 6px rgba(91, 45, 142, 0.08);
     }
 
     .auth-logo-name {
       font-family: 'Outfit', sans-serif;
-      font-size: 26px;
+      font-size: clamp(18px, 4vw, 22px);
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.5px;
       margin-bottom: 4px;
+      line-height: 1.2;
     }
 
     .auth-logo-tag {
@@ -260,6 +264,7 @@
       background: var(--border);
     }
 
+    /* Quick Login Demo Chips */
     .demo-row {
       display: flex;
       gap: 7px;
@@ -290,6 +295,7 @@
     .demo-chip span {
       color: var(--sky-d);
     }
+
 
     .field-wrap {
       margin-bottom: 16px;
@@ -451,15 +457,17 @@
     }
 
     .sb-brand-icon {
-      width: 36px;
-      height: 36px;
-      background: rgba(255, 255, 255, 0.2);
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
       border: 1px solid rgba(255, 255, 255, 0.25);
+      overflow: hidden;
+      flex-shrink: 0;
     }
 
     .sb-brand-name {
@@ -625,13 +633,12 @@
       border-bottom: 1px solid var(--border3);
       display: flex;
       align-items: center;
-      padding: 0 32px;
-      gap: 16px;
+      padding: 0 28px;
+      gap: 14px;
       position: sticky;
       top: 0;
       z-index: 100;
       box-shadow: var(--shadow-xs);
-      flex-shrink: 0;
     }
 
     .menu-btn {
@@ -657,11 +664,11 @@
 
     .topbar-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 22px;
-      font-weight: 800;
+      font-size: 18px;
+      font-weight: 700;
       color: var(--text);
       flex: 1;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.2px;
     }
 
     .topbar-right {
@@ -671,12 +678,12 @@
     }
 
     .topbar-role-chip {
-      padding: 7px 16px;
+      padding: 5px 12px;
       background: var(--sky-pale);
       border: 1px solid var(--sky-xl);
       border-radius: 30px;
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 600;
       color: var(--sky-d);
     }
 
@@ -684,7 +691,6 @@
     .content {
       padding: 28px;
       flex: 1;
-      overflow-y: auto;
     }
 
     /* Pages */
@@ -1995,9 +2001,10 @@
 
       <!-- Logo -->
       <div class="auth-logo">
-        <div class="auth-logo-icon">⚡</div>
-        <div class="auth-logo-name">OrderFlow</div>
-        <div class="auth-logo-tag">Order Management System</div>
+        <div class="auth-logo-icon"><img src="WGS.png" alt="WGS Logo"
+            style="width:100%;height:100%;object-fit:contain;border-radius:12px"></div>
+        <div class="auth-logo-name">WGS Order Processing</div>
+        <div class="auth-logo-tag">Professional Order Management</div>
       </div>
 
       <!-- Error / Info alert -->
@@ -2015,18 +2022,19 @@
 
       <!-- ── COMPANY SLUG FIELD ────────────────────────────── -->
       <div id="slugField" class="field-wrap" style="margin-bottom:18px">
-        <label style="display:flex;align-items:center;gap:6px">🏢 Company Workspace <span
+        <label style="display:flex;align-items:center;gap:6px">🏢 Company Workspace Slug <span
             style="font-size:11px;color:var(--text4);font-weight:400">(your unique company ID)</span></label>
         <input type="text" id="companySlug" placeholder="e.g. mycompany"
           oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"
           style="font-family:monospace;letter-spacing:0.5px">
-        <div id="slugHint" style="font-size:11.5px;color:var(--text4);margin-top:4px">Enter the slug given during
-          company registration. <a href="#" onclick="switchToRegister();return false;" style="color:var(--sky)">Register
-            new company →</a></div>
+        <div id="slugHint" style="font-size:11.5px;color:var(--text4);margin-top:4px">Enter the slug shown after
+          registration. <a href="#" onclick="switchTab('reg');return false;" style="color:var(--sky)">Register new
+            company →</a></div>
       </div>
 
       <!-- ── PANEL 1: Password Login ─────────────────────────── -->
       <div id="panelPwd">
+        <!-- Quick Login Demo Accounts (Restored) -->
         <p
           style="font-size:11.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">
           Demo Accounts</p>
@@ -2036,13 +2044,14 @@
           <div class="demo-chip" onclick="ql('billing')">💳 <span>Billing</span></div>
           <div class="demo-chip" onclick="ql('quality')">🔍 <span>QC</span></div>
         </div>
+
         <div class="field-wrap">
           <label>Email Address</label>
-          <input type="email" id="loginEmail" placeholder="you@company.com" value="admin@company.com">
+          <input type="email" id="loginEmail" placeholder="you@company.com" value="">
         </div>
         <div class="field-wrap">
           <label>Password</label>
-          <input type="password" id="loginPass" placeholder="••••••••" value="password"
+          <input type="password" id="loginPass" placeholder="••••••••" value=""
             onkeydown="if(event.key==='Enter')doLogin()">
         </div>
         <button class="btn-signin" id="btnPwd" onclick="doLogin()">Sign In →</button>
@@ -2092,10 +2101,8 @@
             change it.</span>
         </p>
 
-        <!-- Google Sign-In Button (styled to match Google brand guidelines) -->
         <button id="btnGoogleSignin" onclick="startGoogleLogin()"
           style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 18px;background:#fff;border:1.5px solid var(--border2);border-radius:var(--r);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;color:#3c4043;transition:all 0.2s;box-shadow:var(--shadow-xs)">
-          <!-- Google SVG logo -->
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335"
               d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -2109,7 +2116,6 @@
           Continue with Google
         </button>
 
-        <!-- Hidden: shows after redirect back with token -->
         <div id="googleProcessing" style="display:none;text-align:center;padding:20px 0">
           <div style="font-size:28px;margin-bottom:10px">⏳</div>
           <p style="color:var(--text3);font-size:14px">Completing Google sign-in...</p>
@@ -2121,12 +2127,11 @@
             <strong style="color:var(--text2)">Setup required:</strong> Add <code
               style="background:var(--sky-pale);color:var(--sky-d);padding:1px 5px;border-radius:4px">GOOGLE_CLIENT_ID</code>
             to your backend <code>.env</code> file.
-            See <strong>DEPLOY_GUIDE.md</strong> → Part 4 for instructions.
           </p>
         </div>
       </div>
 
-      <!-- ── PANEL 4: Company Registration ────────────────────── -->
+      <!-- ── PANEL 4: Company Registration ──────────────────── -->
       <div id="panelReg" style="display:none">
         <p style="font-size:13px;color:var(--text3);margin-bottom:18px;line-height:1.5">
           Create a new company workspace. You'll be the <strong>admin</strong> of your team.
@@ -2141,11 +2146,12 @@
         </div>
         <div class="field-wrap">
           <label>Email Address</label>
-          <input type="email" id="regEmail" placeholder="you@company.com">
+          <input type="email" id="regEmail" placeholder="you@yourcompany.com">
         </div>
         <div class="field-wrap">
           <label>Password <span style="font-size:11px;font-weight:400;color:var(--text4)">(min 6 chars)</span></label>
-          <input type="password" id="regPass" placeholder="Create a strong password">
+          <input type="password" id="regPass" placeholder="Create a strong password"
+            onkeydown="if(event.key==='Enter')doRegister()">
         </div>
         <div class="field-wrap">
           <label>Phone <span style="font-size:11px;font-weight:400;color:var(--text4)">(optional)</span></label>
@@ -2174,14 +2180,15 @@
     <aside class="sidebar" id="sidebar">
       <div class="sb-brand-area">
         <div class="sb-brand">
-          <div class="sb-brand-icon">⚡</div>
-          <span class="sb-brand-name">OrderFlow</span>
+          <div class="sb-brand-icon"><img src="WGS.png" alt="WGS"
+              style="width:100%;height:100%;object-fit:contain;border-radius:8px;padding:3px"></div>
+          <span class="sb-brand-name">WGS</span>
         </div>
         <div class="sb-user-chip">
           <div class="sb-avatar" id="sbAv">A</div>
           <div>
             <div class="sb-user-name" id="sbNm">Arjun Sharma</div>
-            <div id="sbCo" style="font-size:11px;color:var(--text4);margin-top:1px"></div>
+            <div id="sbCo" style="font-size:11px;color:var(--text4);margin-top:1px">WGS Order Processing</div>
             <div class="sb-user-role" id="sbRl">Team A Manager</div>
           </div>
         </div>
@@ -2744,7 +2751,7 @@
     </div>
   </div>
 
-  <!-- Edit User Modal -->
+  <!-- Edit User Modal (Restored) -->
   <div class="overlay" id="editUserM" onclick="if(event.target===this)closeM('editUserM')">
     <div class="modal" style="max-width:560px">
       <div class="modal-hd">
@@ -2798,12 +2805,7 @@
     // ================================================================
     // API CONFIG — point this to your Node.js backend on Hostinger
     // ================================================================
-    // CHANGE THIS to your Hostinger Node.js app URL, e.g.:
-    //   const API = 'https://yourdomain.com/api';
-    //   or if backend runs on same domain subfolder:
-    //   const API = '/api';
     const API = window.ORDERFLOW_API || 'http://localhost:3000/api';
-
     let TOKEN = localStorage.getItem('of_token') || null;
 
     async function apiFetch(path, opts = {}) {
@@ -2825,12 +2827,9 @@
     // DATA — local cache (populated from API)
     // ================================================================
     const STORE_KEY = 'orderflow_v1_cache';
-
-    // Local cache — populated from real API responses
     let DB = { orders: [], clients: [], users: [], notifLog: [] };
-    const save = () => { }; // No-op — data lives on the server now
+    const save = () => { };
 
-    // Current session
     let ME = null;
     let CUR_ORDER = null;
     let PEND_ACTION = null;
@@ -2860,7 +2859,7 @@
 
     function timeAgo(dt) {
       if (!dt) return '—';
-      const diff = (new Date('2026-04-25 10:00') - new Date(dt)) / 1000;
+      const diff = (new Date() - new Date(dt)) / 1000;
       if (diff < 60) return 'Just now';
       if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
       if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
@@ -2901,23 +2900,15 @@
     // ================================================================
     // AUTH — Password + Email OTP + Google OAuth
     // ================================================================
-
-    // When backend is connected, set this to your Railway/Render URL:
-    // const API_BASE = 'https://your-backend.railway.app/api';
-    // ✅ SET YOUR RAILWAY URL HERE:
     const API_BASE = 'https://wgs-order-processing.onrender.com/api';
-    // Example: const API_BASE = 'https://orderflow-production-abc1.railway.app/api';
 
-    // Company slug - loaded after login/register
     let COMPANY_SLUG = localStorage.getItem('of_slug') || '';
-    function setSlug(s) { COMPANY_SLUG = s; localStorage.setItem('of_slug', s); }
+    function setSlug(s) { COMPANY_SLUG = s; if (s) localStorage.setItem('of_slug', s); else localStorage.removeItem('of_slug'); }
 
-    // Store JWT token
     function setToken(t) { localStorage.setItem('of_token', t); }
     function getToken() { return localStorage.getItem('of_token'); }
     function clearToken() { localStorage.removeItem('of_token'); localStorage.removeItem('of_user'); }
 
-    // Auth alert helper
     function authAlert(msg, type = 'error') {
       const el = document.getElementById('authAlert');
       el.className = `alert alert-${type} mb-16`;
@@ -2935,18 +2926,18 @@
 
     // ── TAB SWITCHER ──────────────────────────────────────────
     function switchTab(tab) {
+      const sf = document.getElementById('slugField');
+      if (sf) sf.style.display = (tab === 'reg') ? 'none' : '';
       ['pwd', 'otp', 'google', 'reg'].forEach(t => {
         const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
         const panelEl = document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1));
         if (tabEl) tabEl.classList.toggle('active', t === tab);
         if (panelEl) panelEl.style.display = t === tab ? 'block' : 'none';
       });
-      const sf = document.getElementById('slugField');
-      if (sf) sf.style.display = tab === 'reg' ? 'none' : '';
       document.getElementById('authAlert').style.display = 'none';
     }
 
-    // ── DEMO QUICK LOGIN ──────────────────────────────────────
+    // ── DEMO QUICK LOGIN (Restored) ───────────────────────────
     const QUICK = { admin: 'admin@company.com', partner: 'partner@company.com', quality: 'qc@company.com', billing: 'billing@company.com' };
     function ql(role) {
       document.getElementById('loginEmail').value = QUICK[role];
@@ -2957,31 +2948,23 @@
     async function doLogin() {
       const email = document.getElementById('loginEmail').value.trim();
       const pass = document.getElementById('loginPass').value;
-      const slug = document.getElementById('companySlug').value.trim();
-      if (!slug && API_BASE !== 'https://wgs-order-processing.onrender.com/api') { authAlert('Enter your company workspace slug'); return; }
+      const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+      if (!slug) { authAlert('Enter your company workspace slug first.'); return; }
       if (!email || !pass) { authAlert('Please enter email and password.'); return; }
 
-      if (API_BASE) {
-        // Real backend call
-        setBtnLoading('btnPwd', true, 'Sign In →');
-        try {
-          const res = await fetch(`${API_BASE}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-company-slug': slug },
-            body: JSON.stringify({ email, password: pass, company_slug: slug })
-          });
-          const data = await res.json();
-          if (!res.ok) { authAlert(data.error || 'Login failed'); return; }
-          setToken(data.token);
-          loginSuccess(data.user, data.company?.slug, data.company?.name);
-        } catch (e) { authAlert('Cannot reach server. Check your connection.'); }
-        finally { setBtnLoading('btnPwd', false, 'Sign In →'); }
-      } else {
-        // Offline demo mode
-        const user = DB.users.find(u => u.email === email && u.active);
-        if (!user || user.pwd !== pass) { authAlert('Invalid email or password.'); return; }
-        loginSuccess(user);
-      }
+      setBtnLoading('btnPwd', true, 'Sign In →');
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug },
+          body: JSON.stringify({ email, password: pass, company_slug: slug })
+        });
+        const data = await res.json();
+        if (!res.ok) { authAlert(data.error || 'Login failed'); return; }
+        setToken(data.token);
+        loginSuccess(data.user, data.company?.slug, data.company?.name);
+      } catch (e) { authAlert('Cannot reach server. Check your connection.'); }
+      finally { setBtnLoading('btnPwd', false, 'Sign In →'); }
     }
 
     // ── 2. EMAIL OTP ──────────────────────────────────────────
@@ -2991,24 +2974,14 @@
       const email = document.getElementById('otpEmail').value.trim();
       if (!email) { authAlert('Please enter your email address.'); return; }
 
-      if (!API_BASE) {
-        // Demo mode — simulate OTP
-        otpEmailUsed = email;
-        document.getElementById('otpSentMsg').textContent = `Demo: use code 123456 for ${email}`;
-        document.getElementById('otpStep1').style.display = 'none';
-        document.getElementById('otpStep2').style.display = 'block';
-        document.getElementById('otpCode').focus();
-        startOtpTimer(10);
-        toast('Demo OTP: 123456', 'info');
-        return;
-      }
-
+      const slug2 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+      if (!slug2) { authAlert('Enter your company workspace slug first.'); return; }
       setBtnLoading('btnSendOtp', true, 'Send Login Code →');
       try {
         const res = await fetch(`${API_BASE}/auth/otp/send`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
+          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug2 },
+          body: JSON.stringify({ email, company_slug: slug2 })
         });
         const data = await res.json();
         if (!res.ok) { authAlert(data.error || 'Failed to send OTP'); return; }
@@ -3028,27 +3001,18 @@
       const code = document.getElementById('otpCode').value.trim();
       if (!code || code.length !== 6) { authAlert('Please enter the 6-digit code from your email.'); return; }
 
-      if (!API_BASE) {
-        // Demo mode
-        if (code === '123456') {
-          const user = DB.users.find(u => u.email === otpEmailUsed && u.active);
-          if (!user) { authAlert('Email not found in demo data.'); return; }
-          loginSuccess(user);
-        } else { authAlert('Incorrect code. Demo code is: 123456'); }
-        return;
-      }
-
+      const slug3 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
       setBtnLoading('btnVerifyOtp', true, 'Verify Code & Sign In →');
       try {
         const res = await fetch(`${API_BASE}/auth/otp/verify`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: otpEmailUsed, otp: code })
+          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug3 },
+          body: JSON.stringify({ email: otpEmailUsed, otp: code, company_slug: slug3 })
         });
         const data = await res.json();
         if (!res.ok) { authAlert(data.error || 'Verification failed'); return; }
         setToken(data.token);
-        loginSuccess(data.user);
+        loginSuccess(data.user, data.company?.slug, data.company?.name);
       } catch (e) { authAlert('Cannot reach server.'); }
       finally { setBtnLoading('btnVerifyOtp', false, 'Verify Code & Sign In →'); }
     }
@@ -3082,15 +3046,11 @@
 
     // ── 3. GOOGLE OAUTH ───────────────────────────────────────
     function startGoogleLogin() {
-      if (!API_BASE) {
-        authAlert('Google login requires the backend to be connected. Set API_BASE in the script.', 'info');
-        return;
-      }
-      // Method A: Server-side redirect
-      window.location.href = `${API_BASE}/auth/google`;
+      const slug4 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+      if (!slug4) { authAlert('Enter your company workspace slug before using Google login.'); return; }
+      window.location.href = `${API_BASE}/auth/google?slug=${encodeURIComponent(slug4)}`;
     }
 
-    // Handle Google callback token from URL (after redirect)
     function checkGoogleCallback() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('auth_token');
@@ -3141,7 +3101,6 @@
 
     // ── Auto-login if token exists ─────────────────────────────
     async function tryAutoLogin() {
-      // Restore company slug
       const savedSlug = localStorage.getItem('of_slug');
       if (savedSlug) { COMPANY_SLUG = savedSlug; }
       const slugInput = document.getElementById('companySlug');
@@ -3152,25 +3111,17 @@
       const token = getToken();
       if (!token || !savedUser) return;
 
-      if (API_BASE) {
-        try {
-          const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-          if (res.ok) {
-            const data = await res.json();
-            loginSuccess(data.user);
-          } else { clearToken(); }
-        } catch (e) {
-          // Offline? Use cached user
-          loginSuccess(JSON.parse(savedUser));
-        }
-      } else {
-        // Demo mode — use cached
-        const user = DB.users.find(u => u.email === JSON.parse(savedUser).email && u.active);
-        if (user) loginSuccess(user);
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          loginSuccess(data.user);
+        } else { clearToken(); }
+      } catch (e) {
+        loginSuccess(JSON.parse(savedUser));
       }
     }
 
-    // ── API helper (for when backend is connected) ─────────────
     async function api(method, path, body) {
       const token = getToken();
       const res = await fetch(`${API_BASE}${path}`, {
@@ -3192,37 +3143,33 @@
     // APP SETUP
     // ================================================================
     function setupApp() {
-      // Sidebar
       document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
       document.getElementById('sbNm').textContent = ME.name;
       document.getElementById('sbRl').textContent = roleLabel(ME.role);
-      const coName = localStorage.getItem('of_company_name');
+
+      const coName = localStorage.getItem('of_company_name') || (ME.company_name || '');
       if (coName) {
         const coEl = document.getElementById('sbCo');
         if (coEl) coEl.textContent = coName;
       }
       document.getElementById('topRole').textContent = roleLabel(ME.role);
 
-      // Greeting
       const hr = new Date().getHours();
       const gr = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
       const fn = ME.name.split(' ')[0];
       document.getElementById('wbGreet').textContent = `${gr}, ${fn} 👋`;
       document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-      // Role-based visibility
       document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = ME.role === 'admin' ? '' : 'none';
       });
 
-      // Populate partner dropdowns
       const psel = document.getElementById('assignPsel');
       psel.innerHTML = '<option value="">— Choose a Partner —</option>';
       DB.users.filter(u => u.role === 'partner' && u.active).forEach(p => {
         psel.innerHTML += `<option value="${p.id}">${H(p.name)}</option>`;
       });
 
-      // Populate client dropdown in new order form
       const csel = document.getElementById('no_csel');
       csel.innerHTML = '<option value="">— New / Walk-in Client —</option>';
       DB.clients.forEach(c => {
@@ -3230,13 +3177,11 @@
         csel.innerHTML += `<option value="${c.id}" data-n="${H(c.name)}" data-ph="${H(c.phone || '')}" data-em="${H(c.email || '')}" data-cr="${c.credit}">${H(c.name)}${warn}</option>`;
       });
 
-      // Pending badge
       const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
       const pb = document.getElementById('pendBadge');
       pb.textContent = pend;
       pb.style.display = pend > 0 ? '' : 'none';
 
-      // Render
       renderDashStats();
       renderDashRecent();
       renderNotifLog();
@@ -3580,7 +3525,7 @@
       }
       else if (key === 'goods_recv') {
         addLog('goods_received', '📦 Production complete. Goods returned to Team A and logged.');
-        logNotif('email', o.num, o.id, 'admin@company.com', 'Goods Ready for Quality Check');
+        logNotif('email', o.num, o.id, 'team@wgs.com', 'Goods Ready for Quality Check');
         toast('Goods received! Ready for QC.', 'success');
       }
       else if (key === 'start_qc') {
@@ -3611,7 +3556,7 @@
         addLog('dispatched', '🚚 Order billed and dispatched.');
         logNotif('email', o.num, o.id, o.cEmail, 'Your Order Has Been Dispatched!');
         logNotif('sms', o.num, o.id, o.cPhone, 'Dispatch notification');
-        logNotif('email', o.num, o.id, 'admin@company.com', 'Order Dispatched — Client Notified');
+        logNotif('email', o.num, o.id, 'team@wgs.com', 'Order Dispatched — Client Notified');
         setTimeout(() => {
           o.timeline.forEach(t => t.latest = false);
           o.timeline.push({ st: 'completed', act: '✅ Order completed. Client notified via Email + SMS.', by: me, at: now, done: false, latest: true });
@@ -3812,7 +3757,7 @@
     }
 
     // ================================================================
-    // TEAM
+    // TEAM (Restored with Edit / Delete / Toggle)
     // ================================================================
     function renderTeam() {
       document.getElementById('teamTbl').innerHTML = `
@@ -3849,7 +3794,6 @@
       document.getElementById('eu_p').value = '';
       document.getElementById('euAlert').style.display = 'none';
       document.getElementById('editUserTitle').textContent = `Edit — ${u.name}`;
-      // Hide delete button for self
       document.getElementById('euDeleteBtn').style.display = (String(u.id) === String(ME.id)) ? 'none' : '';
       openM('editUserM');
     }
@@ -3871,159 +3815,152 @@
       }
 
       try {
-        const updated = await api('PUT', \`/users/\${id}\`, body);
-    const idx = DB.users.findIndex(x => String(x.id) === String(id));
-    if (idx >= 0) DB.users[idx] = mapUser(updated);
-    closeM('editUserM');
-    renderTeam();
-    toast('Team member updated!', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+        const updated = await api('PUT', `/users/${id}`, body);
+        const idx = DB.users.findIndex(x => String(x.id) === String(id));
+        if (idx >= 0) Object.assign(DB.users[idx], updated);
+        closeM('editUserM');
+        renderTeam();
+        toast('Team member updated!', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-async function toggleUserStatus(id) {
-  const u = DB.users.find(x => String(x.id) === String(id));
-  if (!u) return;
-  if (String(u.id) === String(ME.id)) { toast('You cannot disable your own account.', 'error'); return; }
-  const action = u.active ? 'disable' : 'enable';
-  if (!confirm(\`Are you sure you want to \${action} \${u.name}?\`)) return;
-  try {
-    await api('PATCH', \`/users/\${id}/toggle\`);
-    const idx = DB.users.findIndex(x => String(x.id) === String(id));
-    if (idx >= 0) DB.users[idx].active = !DB.users[idx].active;
-    renderTeam();
-    toast(\`\${u.name} has been \${u.active ? 'deactivated' : 'activated'}.\`, u.active ? 'error' : 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function toggleUserStatus(id) {
+      const u = DB.users.find(x => String(x.id) === String(id));
+      if (!u) return;
+      if (String(u.id) === String(ME.id)) { toast('You cannot disable your own account.', 'error'); return; }
+      const action = u.active ? 'disable' : 'enable';
+      if (!confirm(`Are you sure you want to ${action} ${u.name}?`)) return;
+      try {
+        await api('PATCH', `/users/${id}/toggle`);
+        const idx = DB.users.findIndex(x => String(x.id) === String(id));
+        if (idx >= 0) DB.users[idx].active = !DB.users[idx].active;
+        renderTeam();
+        toast(`${u.name} has been ${u.active ? 'deactivated' : 'activated'}.`, u.active ? 'error' : 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-async function deleteUser() {
-  const id = document.getElementById('eu_id').value;
-  const u  = DB.users.find(x => String(x.id) === String(id));
-  if (!u) return;
-  if (!confirm(\`Permanently delete \${u.name}? This cannot be undone.\`)) return;
-  try {
-    await api('DELETE', \`/users/\${id}\`);
-    DB.users = DB.users.filter(x => String(x.id) !== String(id));
-    closeM('editUserM');
-    renderTeam();
-    toast(\`\${u.name} has been deleted.\`, 'error');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function deleteUser() {
+      const id = document.getElementById('eu_id').value;
+      const u = DB.users.find(x => String(x.id) === String(id));
+      if (!u) return;
+      if (!confirm(`Permanently delete ${u.name}? This cannot be undone.`)) return;
+      try {
+        await api('DELETE', `/users/${id}`);
+        DB.users = DB.users.filter(x => String(x.id) !== String(id));
+        closeM('editUserM');
+        renderTeam();
+        toast(`${u.name} has been deleted.`, 'error');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-function saveUser() {
-  const n=document.getElementById('u_n').value.trim();
-  const e=document.getElementById('u_e').value.trim();
-  const p=document.getElementById('u_p').value;
-  if (!n||!e) { toast('Name and email required.','error'); return; }
-  if (!p)     { toast('Password required.','error'); return; }
-  if (DB.users.find(u=>u.email===e)) { toast('Email already exists.','error'); return; }
-  DB.users.push({
-    id:DB.nextId.user++, name:n, email:e, pwd:p,
-    phone:document.getElementById('u_ph').value.trim(),
-    role:document.getElementById('u_r').value,
-    active:true, lastLogin:'Never'
-  });
-  save(); closeM('userM');
-  ['u_n','u_e','u_ph','u_p'].forEach(id=>document.getElementById(id).value='');
-  renderTeam();
-  toast('Team member added!','success');
-}
+    function saveUser() {
+      const n = document.getElementById('u_n').value.trim();
+      const e = document.getElementById('u_e').value.trim();
+      const p = document.getElementById('u_p').value;
+      if (!n || !e) { toast('Name and email required.', 'error'); return; }
+      if (!p) { toast('Password required.', 'error'); return; }
+      if (DB.users.find(u => u.email === e)) { toast('Email already exists.', 'error'); return; }
 
-// ================================================================
-// NOTIFICATION LOG
-// ================================================================
-function renderNotifLog() {
-  const total  = DB.notifLog.length;
-  const sent   = DB.notifLog.filter(n=>n.status==='sent').length;
-  const failed = DB.notifLog.filter(n=>n.status==='failed').length;
-  const emails = DB.notifLog.filter(n=>n.type==='email').length;
-  const sms    = DB.notifLog.filter(n=>n.type==='sms').length;
+      api('POST', '/users', { name: n, email: e, password: p, role: document.getElementById('u_r').value, phone: document.getElementById('u_ph').value.trim() })
+        .then(newUser => {
+          DB.users.push(newUser);
+          closeM('userM');
+          ['u_n', 'u_e', 'u_ph', 'u_p'].forEach(id => document.getElementById(id).value = '');
+          renderTeam();
+          toast('Team member added!', 'success');
+        })
+        .catch(e => toast(e.message, 'error'));
+    }
 
-  document.getElementById('notifStats').innerHTML = [
-    { l:'Total Sent',  v:total,  cls:'sc-blue',   i:'📨' },
-    { l:'Delivered',   v:sent,   cls:'sc-green',  i:'✅' },
-    { l:'Failed',      v:failed, cls:'sc-red',    i:'❌' },
-    { l:'Emails',      v:emails, cls:'sc-cyan',   i:'📧' },
-    { l:'SMS',         v:sms,    cls:'sc-purple', i:'📱' },
-  ].map(s=>`< div class= "stat-card ${s.cls}" ><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div > `).join('');
+    // ================================================================
+    // NOTIFICATION LOG
+    // ================================================================
+    function renderNotifLog() {
+      const total = DB.notifLog.length;
+      const sent = DB.notifLog.filter(n => n.status === 'sent').length;
+      const failed = DB.notifLog.filter(n => n.status === 'failed').length;
+      const emails = DB.notifLog.filter(n => n.type === 'email').length;
+      const sms = DB.notifLog.filter(n => n.type === 'sms').length;
 
-  document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0,50).map(n=>`
-        < tr >
+      document.getElementById('notifStats').innerHTML = [
+        { l: 'Total Sent', v: total, cls: 'sc-blue', i: '📨' },
+        { l: 'Delivered', v: sent, cls: 'sc-green', i: '✅' },
+        { l: 'Failed', v: failed, cls: 'sc-red', i: '❌' },
+        { l: 'Emails', v: emails, cls: 'sc-cyan', i: '📧' },
+        { l: 'SMS', v: sms, cls: 'sc-purple', i: '📱' },
+      ].map(s => `<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
+
+      document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `
+    <tr>
       <td><span class="muted" style="font-size:12.5px">${n.at}</span></td>
-      <td>${n.type==='email'?`<span class="badge b-sky">📧 Email</span>`:`<span class="badge b-cyan">📱 SMS</span>`}</td>
+      <td>${n.type === 'email' ? `<span class="badge b-sky">📧 Email</span>` : `<span class="badge b-cyan">📱 SMS</span>`}</td>
       <td><span class="mono" onclick="viewOrder(${n.ordId})" style="cursor:pointer">${H(n.ord)}</span></td>
-      <td><span class="muted" style="font-size:13px">${H(n.to||'—')}</span></td>
+      <td><span class="muted" style="font-size:13px">${H(n.to || '—')}</span></td>
       <td style="font-size:13px;color:var(--text2)">${H(n.subj)}</td>
-      <td>${n.status==='sent'?`<span class="badge b-green">✅ Sent</span>`:`<span class="badge b-red">❌ Failed</span>`}</td>
-    </tr >
-          `).join('') || ` < tr > <td colspan="6"><div class="empty"><div class="empty-ico">🔔</div><div>No notifications yet</div></div></td></tr > `;
-}
+      <td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td>
+    </tr>
+  `).join('') || `<tr><td colspan="6"><div class="empty"><div class="empty-ico">🔔</div><div>No notifications yet</div></div></td></tr>`;
+    }
 
-// ================================================================
-// KEYBOARD + MISC
-// ================================================================
-document.addEventListener('keydown', e => {
-  if (e.key==='Escape') document.querySelectorAll('.overlay.show').forEach(o=>o.classList.remove('show'));
-});
-
-document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-
-
-// ── COMPANY REGISTRATION ──────────────────────────────────
-function switchToRegister() { switchTab('reg'); }
-
-async function doRegister() {
-  const company_name = document.getElementById('regCompany').value.trim();
-  const admin_name   = document.getElementById('regName').value.trim();
-  const email        = document.getElementById('regEmail').value.trim();
-  const password     = document.getElementById('regPass').value;
-  const phone        = document.getElementById('regPhone').value.trim();
-
-  if (!company_name) { authAlert('Enter your company name'); return; }
-  if (!admin_name)   { authAlert('Enter your name'); return; }
-  if (!email)        { authAlert('Enter your email'); return; }
-  if (!password || password.length < 6) { authAlert('Password must be at least 6 characters'); return; }
-
-  if (!API_BASE || API_BASE === 'https://wgs-order-processing.onrender.com/api') {
-    authAlert('Connect your backend first (set API_BASE in the script)', 'info');
-    return;
-  }
-
-  setBtnLoading('btnReg', true, 'Creating...');
-  try {
-    const res  = await fetch(`${ API_BASE } /auth/register - company`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_name, admin_name, email, password, phone })
+    // ================================================================
+    // KEYBOARD + MISC
+    // ================================================================
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
     });
-    const data = await res.json();
-    if (!res.ok) { authAlert(data.error || 'Registration failed'); return; }
 
-    // Show success with slug
-    const rd = document.getElementById('regResult');
-    rd.style.display = '';
-    rd.style.background = '#f0fdf4';
-    rd.style.border = '1px solid #bbf7d0';
-    rd.style.color = '#166534';
-    rd.innerHTML = `✅ <strong>Workspace created!</strong><br>
+    document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+
+    // ── COMPANY REGISTRATION ──────────────────────────────────
+    function switchToRegister() { switchTab('reg'); }
+
+    async function doRegister() {
+      const company_name = document.getElementById('regCompany').value.trim();
+      const admin_name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPass').value;
+      const phone = document.getElementById('regPhone').value.trim();
+
+      if (!company_name) { authAlert('Enter your company name'); return; }
+      if (!admin_name) { authAlert('Enter your name'); return; }
+      if (!email) { authAlert('Enter your email'); return; }
+      if (!password || password.length < 6) { authAlert('Password must be at least 6 characters'); return; }
+
+      setBtnLoading('btnReg', true, 'Creating...');
+      try {
+        const res = await fetch(`${API_BASE}/auth/register-company`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company_name, admin_name, email, password, phone })
+        });
+        const data = await res.json();
+        if (!res.ok) { authAlert(data.error || 'Registration failed'); return; }
+
+        // Show success with slug
+        const rd = document.getElementById('regResult');
+        rd.style.display = '';
+        rd.style.background = '#f0fdf4';
+        rd.style.border = '1px solid #bbf7d0';
+        rd.style.color = '#166534';
+        rd.innerHTML = `✅ <strong>Workspace created!</strong><br>
       Company: <strong>${data.company.name}</strong><br>
-      Your login slug: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700">${data.company.slug}</code><br>
-      <span style="font-size:11px;color:#4b5563;margin-top:4px;display:block">Save this slug — you need it every time you log in.</span>`;
+      Your login slug: <code style="background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;font-size:14px">${data.company.slug}</code><br>
+      <span style="font-size:11px;color:#4b5563;margin-top:6px;display:block">📌 Save this slug — you and your team need it to log in every time.</span>`;
 
-    // Auto-login
-    setToken(data.token);
-    setSlug(data.company.slug);
-    localStorage.setItem('of_user', JSON.stringify(data.user));
-    localStorage.setItem('of_company_name', data.company.name);
-    setTimeout(() => loginSuccess(data.user, data.company.slug, data.company.name), 1500);
-  } catch(e) {
-    authAlert('Cannot reach server: ' + e.message);
-  } finally {
-    setBtnLoading('btnReg', false, 'Create Company Workspace →');
-  }
-}
+        // Auto-login
+        setToken(data.token);
+        localStorage.setItem('of_user', JSON.stringify(data.user));
+        setTimeout(() => loginSuccess(data.user, data.company.slug, data.company.name), 1800);
+      } catch (e) {
+        authAlert('Cannot reach server: ' + e.message);
+      } finally {
+        setBtnLoading('btnReg', false, 'Create Company Workspace →');
+      }
+    }
 
-// Auto-login on page load (checks saved token or Google callback)
-tryAutoLogin();
+    // Auto-login on page load
+    tryAutoLogin();
   </script>
 </body>
 
