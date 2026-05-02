@@ -1607,8 +1607,8 @@ html, body { height: 100%; overflow: hidden; }
                 <label>Priority</label>
                 <select id="no_prio">
                   <option value="normal">Normal</option>
-                  <option value="urgent">🔶 Urgent</option>
-                  <option value="critical">🔴 Critical</option>
+                  <option value="high">🔶 High</option>
+                  <option value="urgent">🔴 Urgent</option>
                 </select>
               </div>
             </div>
@@ -1944,7 +1944,7 @@ function mapUser(u) {
     phone:     u.phone || '',
     role:      u.role,
     active:    u.is_active !== undefined ? u.is_active : true,
-    lastLogin: u.last_login_at ? new Date(u.last_login_at).toLocaleString('en-IN') : 'Never',
+    lastLogin: u.last_login ? new Date(u.last_login).toLocaleString('en-IN') : 'Never',
   };
 }
 
@@ -1993,8 +1993,9 @@ const H = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 const fmtAmt = n => n > 0 ? '₹'+Number(n).toLocaleString('en-IN') : '—';
 
 function prioBadge(p) {
-  if (p==='critical') return `<span class="badge b-red">🔴 Critical</span>`;
-  if (p==='urgent')   return `<span class="badge b-orange">🔶 Urgent</span>`;
+  if (p==='urgent') return `<span class="badge b-red">🔴 Urgent</span>`;
+  if (p==='high')   return `<span class="badge b-orange">🔶 High</span>`;
+  if (p==='low')    return `<span class="badge b-gray" style="opacity:0.7">Low</span>`;
   return `<span class="badge b-gray">Normal</span>`;
 }
 
@@ -2004,7 +2005,7 @@ function creditChip(c) {
 
 function timeAgo(dt) {
   if (!dt) return '—';
-  const diff = (new Date('2026-04-25 10:00') - new Date(dt)) / 1000;
+  const diff = (new Date() - new Date(dt)) / 1000;
   if (diff < 60)    return 'Just now';
   if (diff < 3600)  return Math.floor(diff/60)+'m ago';
   if (diff < 86400) return Math.floor(diff/3600)+'h ago';
@@ -2721,7 +2722,6 @@ async function doAssign() {
 function logNotif(type, ord, ordId, to, subj, status='sent') {
   const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})+', '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
   DB.notifLog.unshift({ type, ord, ordId, to, subj, status, at:now });
-  save();
 }
 
 // ================================================================
