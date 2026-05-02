@@ -1950,6 +1950,90 @@
         flex-direction: column;
       }
     }
+    /* =============================================================
+   ✨ ULTIMATE MOBILE APP POLISH ✨
+   (Paste this at the very bottom of your <style> block)
+   ============================================================= */
+@media (max-width: 768px) {
+  /* 1. Glassmorphism Header (Sticky & Blurred like iOS) */
+  .topbar {
+    background: rgba(255, 255, 255, 0.80) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    padding: 0 16px;
+  }
+
+  /* 2. Horizontal Swipeable Stats Cards 
+     Instead of stacking them in a massive vertical line, 
+     users can swipe left/right like a modern dashboard */
+  .stats-grid {
+    display: flex !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 12px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  .stats-grid::-webkit-scrollbar { 
+    display: none; /* Hide scrollbar for clean look */
+  }
+  .stat-card {
+    min-width: 145px;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    padding: 16px;
+  }
+
+  /* 3. Floating Action Button (FAB) for "+ New Order"
+     Moves the button out of the header and pins it to the bottom right */
+  .filter-bar .btn-primary,
+  .wb-btn .btn-outline {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0px; /* Hide text */
+    background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4) !important;
+    z-index: 900;
+    transition: transform 0.2s cubic-bezier(0.16,1,0.3,1);
+  }
+  .filter-bar .btn-primary::after,
+  .wb-btn .btn-outline::after {
+    content: '+';
+    font-size: 32px;
+    font-weight: 400;
+    margin-bottom: 4px;
+  }
+  .filter-bar .btn-primary:active,
+  .wb-btn .btn-outline:active {
+    transform: scale(0.92);
+  }
+
+  /* 4. Touch-Friendly Table Rows */
+  .tbl td { 
+    padding: 18px 16px; 
+    font-size: 14px; 
+  }
+  
+  /* 5. Immersive Auth Screen */
+  .auth-card {
+    padding: 32px 24px !important;
+    border-radius: 28px !important;
+    box-shadow: 0 20px 40px rgba(15,45,82,0.1) !important;
+  }
+}
   </style>
 </head>
 
