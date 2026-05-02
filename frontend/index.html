@@ -2442,7 +2442,7 @@ function renderDashRecent() {
   document.getElementById('dashTbl').innerHTML = `
     <thead><tr><th>Order #</th><th>Client</th><th>Source</th><th>Status</th><th>Priority</th><th>Updated</th><th></th></tr></thead>
     <tbody>${orders.map(o=>`
-      <tr onclick="viewOrder(${o.id})">
+      <tr onclick="viewOrder('${o.id}')">
         <td><span class="mono">${H(o.num)}</span></td>
         <td><span class="strong">${H(o.cName)}</span></td>
         <td><span class="src">${SRC_ICON[o.src]||'📋'} ${o.src.replace('_',' ')}</span></td>
@@ -2484,7 +2484,7 @@ function renderOrders() {
   t.innerHTML = `
     <thead><tr><th>Order #</th><th>Client</th><th>Source</th><th>Status</th><th>Priority</th><th>Partner</th><th>Amount</th><th>Updated</th></tr></thead>
     <tbody>${list.map(o=>`
-      <tr onclick="viewOrder(${o.id})">
+      <tr onclick="viewOrder('${o.id}')">
         <td><span class="mono">${H(o.num)}</span></td>
         <td>
           <div class="strong">${H(o.cName)}</div>
@@ -2794,7 +2794,7 @@ function renderClients() {
         <td>${creditChip(c.credit)}</td>
         <td>${c.pending>0?`<span style="color:var(--red);font-weight:700">₹${Number(c.pending).toLocaleString('en-IN')}</span>`:'—'}</td>
         <td><span class="badge b-sky">${DB.orders.filter(o=>o.clientId===c.id).length}</span></td>
-        ${admin?`<td><button class="btn btn-outline btn-xs" onclick="editClient(${c.id});event.stopPropagation()">Edit</button></td>`:''}
+        ${admin?`<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}');event.stopPropagation()">Edit</button></td>`:''}
       </tr>
     `).join('')}</tbody>`;
 }
@@ -2918,7 +2918,7 @@ function renderNotifLog() {
     <tr>
       <td><span class="muted" style="font-size:12.5px">${n.at}</span></td>
       <td>${n.type==='email'?`<span class="badge b-sky">📧 Email</span>`:`<span class="badge b-cyan">📱 SMS</span>`}</td>
-      <td><span class="mono" onclick="viewOrder(${n.ordId})" style="cursor:pointer">${H(n.ord)}</span></td>
+      <td><span class="mono" onclick="viewOrder('${n.ordId}')" style="cursor:pointer">${H(n.ord)}</span></td>
       <td><span class="muted" style="font-size:13px">${H(n.to||'—')}</span></td>
       <td style="font-size:13px;color:var(--text2)">${H(n.subj)}</td>
       <td>${n.status==='sent'?`<span class="badge b-green">✅ Sent</span>`:`<span class="badge b-red">❌ Failed</span>`}</td>
