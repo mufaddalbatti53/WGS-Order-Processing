@@ -1,17 +1,17 @@
 // services/notify.js — Email + SMS with company-scoped notification logging
 const nodemailer = require('nodemailer');
-const axios      = require('axios');
+const axios = require('axios');
 const { Notification, User } = require('../db/models');
 
 let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
   transporter = nodemailer.createTransport({
-    host:   process.env.SMTP_HOST   || 'smtp.gmail.com',
-    port:   parseInt(process.env.SMTP_PORT || '587'),
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
-    auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    tls:    { rejectUnauthorized: false },
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    tls: { rejectUnauthorized: false },
   });
   return transporter;
 }
@@ -45,13 +45,13 @@ async function logNotif({ companyId, orderId, type, recipient, subject, message,
   try {
     const n = await Notification.create({
       company_id: companyId,
-      order_id:   orderId || null,
+      order_id: orderId || null,
       type, recipient: recipient || '', subject: subject || '',
       message: message || '', status: status || 'pending',
       error_msg: errorMsg || null,
     });
     return n._id;
-  } catch(e) { console.error('[NOTIFY] Log error:', e.message); return null; }
+  } catch (e) { console.error('[NOTIFY] Log error:', e.message); return null; }
 }
 
 async function sendEmail(to, subject, bodyHTML, companyId = null, orderId = null) {
@@ -145,7 +145,7 @@ async function notifyQCFailed(order, partner, reason) {
 }
 
 async function notifyGoodsReceived(order, companyId) {
-  const team = await User.find({ company_id: companyId, role: { $in: ['admin','quality'] }, is_active: true }).select('email');
+  const team = await User.find({ company_id: companyId, role: { $in: ['admin', 'quality'] }, is_active: true }).select('email');
   const html = `<p>Order <strong>#${order.order_number}</strong> production is complete. Please proceed with <strong>quality check</strong>.</p>`;
   for (const t of team) await sendEmail(t.email, `Goods Ready for QC — #${order.order_number}`, html, companyId, order._id);
 }

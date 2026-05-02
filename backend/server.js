@@ -1,7 +1,7 @@
 require('dotenv').config();
-const express    = require('express');
-const cors       = require('cors');
-const path       = require('path');
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
 const { connectDB } = require('./db/index');
 
 const app = express();
@@ -13,15 +13,15 @@ app.use(express.json({ limit: '10mb' }));
 // Connect to MongoDB before handling API requests
 app.use('/api', async (req, res, next) => {
   try { await connectDB(); next(); }
-  catch(e) { res.status(503).json({ error: 'Database connection failed: ' + e.message }); }
+  catch (e) { res.status(503).json({ error: 'Database connection failed: ' + e.message }); }
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'WGS Order Processing API', time: new Date().toISOString(), db: 'MongoDB' }));
 
-app.use('/api/auth',          require('./routes/auth'));
-app.use('/api/orders',        require('./routes/orders'));
-app.use('/api/clients',       require('./routes/clients'));
-app.use('/api/users',         require('./routes/users'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/clients', require('./routes/clients'));
+app.use('/api/users', require('./routes/users'));
 app.use('/api/notifications', require('./routes/notifications'));
 
 // Serve frontend static files
