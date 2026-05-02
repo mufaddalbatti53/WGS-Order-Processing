@@ -2843,318 +2843,43 @@
     'use strict';
 
     // ================================================================
-    // API CONFIG — point this to your Node.js backend on Hostinger
+    // API CONFIG — Connected to Render
     // ================================================================
-    const API = window.ORDERFLOW_API || 'http://localhost:3000/api';
+    const API_BASE = 'https://wgs-order-processing.onrender.com/api';
     let TOKEN = localStorage.getItem('of_token') || null;
+    let COMPANY_SLUG = localStorage.getItem('of_slug') || '';
 
-    async function apiFetch(path, opts = {}) {
-      const res = await fetch(API + path, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}),
-          ...(opts.headers || {}),
-        },
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      return data;
-    }
-
-    // ================================================================
-    // DATA — local cache (populated from API)
-    // ================================================================
-    const STORE_KEY = 'orderflow_v1_cache';
+    // Central Data Store
     let DB = { orders: [], clients: [], users: [], notifLog: [] };
-    const save = () => { };
-
     let ME = null;
     let CUR_ORDER = null;
     let PEND_ACTION = null;
 
     // ================================================================
-    // HELPERS
+    // DATA MAPPERS (Translates MongoDB data to Frontend UI)
     // ================================================================
-    const roleLabel = r => ({ admin: 'Team A — Manager', partner: 'Production Partner', quality: 'Quality Control', billing: 'Billing & Dispatch' }[r] || r);
-    const roleColor = r => ({ admin: 'b-sky', partner: 'b-purple', quality: 'b-yellow', billing: 'b-cyan' }[r] || 'b-gray');
+    const mapOrder = o => ({
+      id: o._id || o.id, num: o.order_number, clientId: o.client_id, cName: o.client_name,
+      cPhone: o.client_phone, cEmail: o.client_email, src: o.source, desc: o.description,
+      status: o.status, prio: o.priority, partnerId: o.partner_id?._id || o.partner_id,
+      pName: o.partner_name, amt: o.amount, updated: o.updated_at, created: new Date(o.created_at).toLocaleDateString('en-IN'),
+      rejReason: o.rej_reason, qNotes: o.quality_notes, bNotes: o.billing_notes, dispInfo: o.dispatch_info,
+      timeline: (o.timeline || []).map((t, i, arr) => ({
+        st: t.status, act: t.action, by: t.actor_name, at: new Date(t.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        note: t.notes, fail: t.is_fail, done: true, latest: i === arr.length - 1
+      })).reverse()
+    });
 
-    const STATUS_LABEL = { received: 'Order Received', credit_check: 'Credit Check', credit_rejected: 'Credit Rejected', assigned: 'Assigned to Partner', in_production: 'In Production', goods_received: 'Goods Received', quality_check: 'Quality Check', quality_failed: 'QC Failed', billing: 'Billing', dispatched: 'Dispatched', completed: 'Completed' };
-    const STATUS_COLOR = { received: 'b-sky', credit_check: 'b-yellow', credit_rejected: 'b-red', assigned: 'b-purple', in_production: 'b-purple', goods_received: 'b-blue', quality_check: 'b-yellow', quality_failed: 'b-red', billing: 'b-cyan', dispatched: 'b-cyan', completed: 'b-green' };
-
-    const SRC_ICON = { phone: '📞', email: '📧', whatsapp: '💬', web: '🌐', direct: '🤝', referral: '👥', old_client: '⭐' };
-    const H = s => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const fmtAmt = n => n > 0 ? '₹' + Number(n).toLocaleString('en-IN') : '—';
-
-    function prioBadge(p) {
-      if (p === 'critical') return `<span class="badge b-red">🔴 Critical</span>`;
-      if (p === 'urgent') return `<span class="badge b-orange">🔶 Urgent</span>`;
-      return `<span class="badge b-gray">Normal</span>`;
-    }
-
-    function creditChip(c) {
-      return { good: `<span class="cr-good">✅ Good</span>`, hold: `<span class="cr-hold">⚠️ On Hold</span>`, blocked: `<span class="cr-blocked">🚫 Blocked</span>` }[c] || '';
-    }
-
-    function timeAgo(dt) {
-      if (!dt) return '—';
-      const diff = (new Date() - new Date(dt)) / 1000;
-      if (diff < 60) return 'Just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
-    }
-
-    function genNum() {
-      const d = new Date();
-      const dd = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-      const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-      return `ORD-${dd}-${rand}`;
-    }
+    const mapClient = c => ({ id: c._id || c.id, name: c.name, company: c.company, phone: c.phone, email: c.email, credit: c.credit_status, pending: c.pending_amount, notes: c.notes });
+    const mapUser = u => ({ id: u._id || u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, active: u.is_active, lastLogin: u.last_login ? new Date(u.last_login).toLocaleDateString('en-IN') : 'Never' });
 
     // ================================================================
-    // TOASTS
+    // CORE API CALLER
     // ================================================================
-    function toast(msg, type = 'info') {
-      const c = document.getElementById('toastWrap');
-      const el = document.createElement('div');
-      el.className = `toast toast-${type}`;
-      const icon = { success: '✅', error: '❌', info: 'ℹ️' }[type] || 'ℹ️';
-      el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
-      c.appendChild(el);
-      setTimeout(() => {
-        el.style.transition = 'all 0.4s';
-        el.style.opacity = '0';
-        el.style.transform = 'translateX(24px)';
-        setTimeout(() => el.remove(), 400);
-      }, 3500);
-    }
-
-    // ================================================================
-    // MODAL HELPERS
-    // ================================================================
-    function openM(id) { document.getElementById(id).classList.add('show'); }
-    function closeM(id) { document.getElementById(id).classList.remove('show'); }
-
-    // ================================================================
-    // AUTH — Password + Email OTP + Google OAuth
-    // ================================================================
-    const API_BASE = 'https://wgs-order-processing.onrender.com/api';
-
-    let COMPANY_SLUG = localStorage.getItem('of_slug') || '';
-    function setSlug(s) { COMPANY_SLUG = s; if (s) localStorage.setItem('of_slug', s); else localStorage.removeItem('of_slug'); }
-
-    function setToken(t) { localStorage.setItem('of_token', t); }
+    function setToken(t) { localStorage.setItem('of_token', t); TOKEN = t; }
     function getToken() { return localStorage.getItem('of_token'); }
-    function clearToken() { localStorage.removeItem('of_token'); localStorage.removeItem('of_user'); }
-
-    function authAlert(msg, type = 'error') {
-      const el = document.getElementById('authAlert');
-      el.className = `alert alert-${type} mb-16`;
-      el.textContent = msg;
-      el.style.display = 'flex';
-      setTimeout(() => { el.style.display = 'none'; }, 5000);
-    }
-
-    function setBtnLoading(id, loading, label) {
-      const b = document.getElementById(id);
-      if (!b) return;
-      b.disabled = loading;
-      b.textContent = loading ? '⏳ Please wait...' : label;
-    }
-
-    // ── TAB SWITCHER ──────────────────────────────────────────
-    function switchTab(tab) {
-      const sf = document.getElementById('slugField');
-      if (sf) sf.style.display = (tab === 'reg') ? 'none' : '';
-      ['pwd', 'otp', 'google', 'reg'].forEach(t => {
-        const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-        const panelEl = document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1));
-        if (tabEl) tabEl.classList.toggle('active', t === tab);
-        if (panelEl) panelEl.style.display = t === tab ? 'block' : 'none';
-      });
-      document.getElementById('authAlert').style.display = 'none';
-    }
-
-
-    // ── 1. PASSWORD LOGIN ─────────────────────────────────────
-    async function doLogin() {
-      const email = document.getElementById('loginEmail').value.trim();
-      const pass = document.getElementById('loginPass').value;
-      const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-      if (!slug) { authAlert('Enter your company workspace slug first.'); return; }
-      if (!email || !pass) { authAlert('Please enter email and password.'); return; }
-
-      setBtnLoading('btnPwd', true, 'Sign In →');
-      try {
-        const res = await fetch(`${API_BASE}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug },
-          body: JSON.stringify({ email, password: pass, company_slug: slug })
-        });
-        const data = await res.json();
-        if (!res.ok) { authAlert(data.error || 'Login failed'); return; }
-        setToken(data.token);
-        loginSuccess(data.user, data.company?.slug, data.company?.name);
-      } catch (e) { authAlert('Cannot reach server. Check your connection.'); }
-      finally { setBtnLoading('btnPwd', false, 'Sign In →'); }
-    }
-
-    // ── 2. EMAIL OTP ──────────────────────────────────────────
-    let otpEmailUsed = '';
-
-    async function sendOtp() {
-      const email = document.getElementById('otpEmail').value.trim();
-      if (!email) { authAlert('Please enter your email address.'); return; }
-
-      const slug2 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-      if (!slug2) { authAlert('Enter your company workspace slug first.'); return; }
-      setBtnLoading('btnSendOtp', true, 'Send Login Code →');
-      try {
-        const res = await fetch(`${API_BASE}/auth/otp/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug2 },
-          body: JSON.stringify({ email, company_slug: slug2 })
-        });
-        const data = await res.json();
-        if (!res.ok) { authAlert(data.error || 'Failed to send OTP'); return; }
-
-        otpEmailUsed = email;
-        document.getElementById('otpSentMsg').textContent = `Code sent to ${email}`;
-        document.getElementById('otpStep1').style.display = 'none';
-        document.getElementById('otpStep2').style.display = 'block';
-        document.getElementById('otpCode').focus();
-        startOtpTimer(data.expiresInMinutes || 10);
-        toast(`OTP sent to ${email}! Check your inbox.`, 'success');
-      } catch (e) { authAlert('Cannot reach server. Check your connection.'); }
-      finally { setBtnLoading('btnSendOtp', false, 'Send Login Code →'); }
-    }
-
-    async function verifyOtp() {
-      const code = document.getElementById('otpCode').value.trim();
-      if (!code || code.length !== 6) { authAlert('Please enter the 6-digit code from your email.'); return; }
-
-      const slug3 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-      setBtnLoading('btnVerifyOtp', true, 'Verify Code & Sign In →');
-      try {
-        const res = await fetch(`${API_BASE}/auth/otp/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-company-slug': slug3 },
-          body: JSON.stringify({ email: otpEmailUsed, otp: code, company_slug: slug3 })
-        });
-        const data = await res.json();
-        if (!res.ok) { authAlert(data.error || 'Verification failed'); return; }
-        setToken(data.token);
-        loginSuccess(data.user, data.company?.slug, data.company?.name);
-      } catch (e) { authAlert('Cannot reach server.'); }
-      finally { setBtnLoading('btnVerifyOtp', false, 'Verify Code & Sign In →'); }
-    }
-
-    function resetOtp() {
-      document.getElementById('otpStep1').style.display = 'block';
-      document.getElementById('otpStep2').style.display = 'none';
-      document.getElementById('otpCode').value = '';
-      document.getElementById('otpEmail').value = '';
-      document.getElementById('authAlert').style.display = 'none';
-    }
-
-    let otpTimerInterval = null;
-    function startOtpTimer(minutes) {
-      clearInterval(otpTimerInterval);
-      let secs = minutes * 60;
-      const el = document.getElementById('otpTimer');
-      otpTimerInterval = setInterval(() => {
-        secs--;
-        if (secs <= 0) {
-          clearInterval(otpTimerInterval);
-          el.innerHTML = '<span style="color:var(--red)">Code expired. Please request a new one.</span>';
-          document.getElementById('otpCode').disabled = true;
-          document.getElementById('btnVerifyOtp').disabled = true;
-        } else {
-          const m = Math.floor(secs / 60), s = String(secs % 60).padStart(2, '0');
-          el.textContent = `Code expires in ${m}:${s}`;
-        }
-      }, 1000);
-    }
-
-    // ── 3. GOOGLE OAUTH ───────────────────────────────────────
-    function startGoogleLogin() {
-      const slug4 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-      if (!slug4) { authAlert('Enter your company workspace slug before using Google login.'); return; }
-      window.location.href = `${API_BASE}/auth/google?slug=${encodeURIComponent(slug4)}`;
-    }
-
-    function checkGoogleCallback() {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('auth_token');
-      const err = params.get('auth_error');
-      const userStr = params.get('auth_user');
-
-      if (err) {
-        switchTab('google');
-        authAlert('Google login failed: ' + decodeURIComponent(err));
-        window.history.replaceState({}, '', window.location.pathname);
-        return;
-      }
-
-      if (token) {
-        document.getElementById('googleProcessing').style.display = 'block';
-        document.getElementById('btnGoogleSignin').style.display = 'none';
-        setToken(token);
-        try {
-          const user = JSON.parse(decodeURIComponent(userStr));
-          window.history.replaceState({}, '', window.location.pathname);
-          loginSuccess(user);
-        } catch (e) {
-          authAlert('Login error — please try again.');
-        }
-      }
-    }
-
-    // ── SHARED: Login success handler ─────────────────────────
-    function loginSuccess(user, companySlug, companyName) {
-      if (companySlug) setSlug(companySlug);
-      if (companyName) localStorage.setItem('of_company_name', companyName);
-      ME = user;
-      localStorage.setItem('of_user', JSON.stringify(user));
-      document.getElementById('authScreen').style.display = 'none';
-      document.getElementById('appScreen').classList.add('show');
-      document.getElementById('authAlert').style.display = 'none';
-      setupApp();
-    }
-
-    function doLogout() {
-      ME = null;
-      clearToken();
-      document.getElementById('appScreen').classList.remove('show');
-      document.getElementById('authScreen').style.display = 'flex';
-      resetOtp();
-      switchTab('pwd');
-    }
-
-    // ── Auto-login if token exists ─────────────────────────────
-    async function tryAutoLogin() {
-      const savedSlug = localStorage.getItem('of_slug');
-      if (savedSlug) { COMPANY_SLUG = savedSlug; }
-      const slugInput = document.getElementById('companySlug');
-      if (slugInput && savedSlug) slugInput.value = savedSlug;
-      checkGoogleCallback();
-
-      const savedUser = localStorage.getItem('of_user');
-      const token = getToken();
-      if (!token || !savedUser) return;
-
-      try {
-        const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          loginSuccess(data.user);
-        } else { clearToken(); }
-      } catch (e) {
-        loginSuccess(JSON.parse(savedUser));
-      }
-    }
+    function setSlug(s) { COMPANY_SLUG = s; if (s) localStorage.setItem('of_slug', s); else localStorage.removeItem('of_slug'); }
+    function clearToken() { localStorage.removeItem('of_token'); localStorage.removeItem('of_user'); TOKEN = null; }
 
     async function api(method, path, body) {
       const token = getToken();
@@ -3174,780 +2899,69 @@
     }
 
     // ================================================================
-    // APP SETUP
+    // HELPERS & UI
     // ================================================================
-    function setupApp() {
-      document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
-      document.getElementById('sbNm').textContent = ME.name;
-      document.getElementById('sbRl').textContent = roleLabel(ME.role);
+    const roleLabel = r => ({ admin: 'Team A — Manager', partner: 'Production Partner', quality: 'Quality Control', billing: 'Billing & Dispatch' }[r] || r);
+    const roleColor = r => ({ admin: 'b-sky', partner: 'b-purple', quality: 'b-yellow', billing: 'b-cyan' }[r] || 'b-gray');
+    const STATUS_LABEL = { received: 'Order Received', credit_check: 'Credit Check', credit_rejected: 'Credit Rejected', assigned: 'Assigned to Partner', in_production: 'In Production', goods_received: 'Goods Received', quality_check: 'Quality Check', quality_failed: 'QC Failed', billing: 'Billing', dispatched: 'Dispatched', completed: 'Completed' };
+    const STATUS_COLOR = { received: 'b-sky', credit_check: 'b-yellow', credit_rejected: 'b-red', assigned: 'b-purple', in_production: 'b-purple', goods_received: 'b-blue', quality_check: 'b-yellow', quality_failed: 'b-red', billing: 'b-cyan', dispatched: 'b-cyan', completed: 'b-green' };
+    const SRC_ICON = { phone: '📞', email: '📧', whatsapp: '💬', web: '🌐', direct: '🤝', referral: '👥' };
+    const H = s => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const fmtAmt = n => n > 0 ? '₹' + Number(n).toLocaleString('en-IN') : '—';
+    function prioBadge(p) { return p === 'critical' ? `<span class="badge b-red">🔴 Critical</span>` : p === 'urgent' ? `<span class="badge b-orange">🔶 Urgent</span>` : `<span class="badge b-gray">Normal</span>`; }
+    function creditChip(c) { return { good: `<span class="cr-good">✅ Good</span>`, hold: `<span class="cr-hold">⚠️ On Hold</span>`, blocked: `<span class="cr-blocked">🚫 Blocked</span>` }[c] || ''; }
+    function timeAgo(dt) {
+      if (!dt) return '—';
+      const diff = (new Date() - new Date(dt)) / 1000;
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return Math.floor(diff / 86400) + 'd ago';
+    }
 
-      const coName = localStorage.getItem('of_company_name') || (ME.company_name || '');
-      if (coName) {
-        const coEl = document.getElementById('sbCo');
-        if (coEl) coEl.textContent = coName;
-      }
-      document.getElementById('topRole').textContent = roleLabel(ME.role);
+    function toast(msg, type = 'info') {
+      const c = document.getElementById('toastWrap');
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.innerHTML = `<span>${{ success: '✅', error: '❌', info: 'ℹ️' }[type] || 'ℹ️'}</span><span>${msg}</span>`;
+      c.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(24px)'; setTimeout(() => el.remove(), 400); }, 3500);
+    }
 
-      const hr = new Date().getHours();
-      const gr = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-      const fn = ME.name.split(' ')[0];
-      document.getElementById('wbGreet').textContent = `${gr}, ${fn} 👋`;
-      document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    function openM(id) { document.getElementById(id).classList.add('show'); }
+    function closeM(id) { document.getElementById(id).classList.remove('show'); }
+    function authAlert(msg, type = 'error') { const el = document.getElementById('authAlert'); el.className = `alert alert-${type} mb-16`; el.textContent = msg; el.style.display = 'flex'; setTimeout(() => el.style.display = 'none', 5000); }
+    function setBtnLoading(id, loading, label) { const b = document.getElementById(id); if (b) { b.disabled = loading; b.textContent = loading ? '⏳ Please wait...' : label; } }
 
-      document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = ME.role === 'admin' ? '' : 'none';
+    // ── TAB SWITCHER ──────────────────────────────────────────
+    function switchTab(tab) {
+      const sf = document.getElementById('slugField');
+      if (sf) sf.style.display = (tab === 'reg') ? 'none' : '';
+      ['pwd', 'otp', 'google', 'reg'].forEach(t => {
+        const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+        const panelEl = document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (tabEl) tabEl.classList.toggle('active', t === tab);
+        if (panelEl) panelEl.style.display = t === tab ? 'block' : 'none';
       });
-
-      const psel = document.getElementById('assignPsel');
-      psel.innerHTML = '<option value="">— Choose a Partner —</option>';
-      DB.users.filter(u => u.role === 'partner' && u.active).forEach(p => {
-        psel.innerHTML += `<option value="${p.id}">${H(p.name)}</option>`;
-      });
-
-      const csel = document.getElementById('no_csel');
-      csel.innerHTML = '<option value="">— New / Walk-in Client —</option>';
-      DB.clients.forEach(c => {
-        const warn = c.credit !== 'good' ? ' ⚠️' : '';
-        csel.innerHTML += `<option value="${c.id}" data-n="${H(c.name)}" data-ph="${H(c.phone || '')}" data-em="${H(c.email || '')}" data-cr="${c.credit}">${H(c.name)}${warn}</option>`;
-      });
-
-      const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
-      const pb = document.getElementById('pendBadge');
-      pb.textContent = pend;
-      pb.style.display = pend > 0 ? '' : 'none';
-
-      renderDashStats();
-      renderDashRecent();
-      renderNotifLog();
-      go('dashboard');
+      document.getElementById('authAlert').style.display = 'none';
     }
 
-    // ================================================================
-    // NAVIGATION
-    // ================================================================
-    function go(page) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-      const pg = document.getElementById(`pg-${page}`);
-      if (pg) pg.classList.add('show');
-
-      const ni = document.querySelector(`.nav-item[data-p="${page}"]`);
-      if (ni) ni.classList.add('active');
-
-      const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications' };
-      document.getElementById('topTitle').textContent = titles[page] || page;
-
-      if (page === 'orders') renderOrders();
-      if (page === 'clients') renderClients();
-      if (page === 'team') renderTeam();
-
-      if (window.innerWidth < 960) closeSidebar();
-      window.scrollTo(0, 0);
-    }
-
-    // ================================================================
-    // SIDEBAR
-    // ================================================================
-    function toggleSidebar() {
-      const sb = document.getElementById('sidebar');
-      const bg = document.getElementById('mobBg');
-      const open = !sb.classList.contains('mob-open');
-      sb.classList.toggle('mob-open', open);
-      bg.classList.toggle('show', open);
-      document.body.style.overflow = open ? 'hidden' : '';
-    }
-
-    function closeSidebar() {
-      document.getElementById('sidebar').classList.remove('mob-open');
-      document.getElementById('mobBg').classList.remove('show');
-      document.body.style.overflow = '';
-    }
-
-    // ================================================================
-    // DASHBOARD
-    // ================================================================
-    function renderDashStats() {
-      const r = ME.role;
-      let stats = [];
-
-      if (r === 'admin') {
-        stats = [
-          { l: 'Total Orders', v: DB.orders.length, cls: 'sc-blue', i: '📋' },
-          { l: 'Pending Review', v: DB.orders.filter(o => ['received', 'credit_check'].includes(o.status)).length, cls: 'sc-yellow', i: '⏳' },
-          { l: 'In Production', v: DB.orders.filter(o => ['assigned', 'in_production', 'goods_received', 'quality_check'].includes(o.status)).length, cls: 'sc-purple', i: '⚙️' },
-          { l: 'Billing Pending', v: DB.orders.filter(o => o.status === 'billing').length, cls: 'sc-cyan', i: '💳' },
-          { l: 'Completed', v: DB.orders.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅' },
-          { l: 'Total Clients', v: DB.clients.length, cls: 'sc-blue', i: '👥' },
-        ];
-      } else if (r === 'partner') {
-        const mine = DB.orders.filter(o => o.partnerId === ME.id);
-        stats = [
-          { l: 'New Assignments', v: mine.filter(o => o.status === 'assigned').length, cls: 'sc-yellow', i: '📌' },
-          { l: 'In Progress', v: mine.filter(o => o.status === 'in_production').length, cls: 'sc-purple', i: '⚙️' },
-          { l: 'QC Failed / Redo', v: mine.filter(o => o.status === 'quality_failed').length, cls: 'sc-red', i: '❌' },
-          { l: 'Completed', v: mine.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅' },
-        ];
-      } else if (r === 'billing') {
-        stats = [
-          { l: 'Ready to Bill', v: DB.orders.filter(o => o.status === 'billing').length, cls: 'sc-yellow', i: '💳' },
-          { l: 'Dispatched', v: DB.orders.filter(o => o.status === 'dispatched').length, cls: 'sc-cyan', i: '🚚' },
-          { l: 'Completed', v: DB.orders.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅' },
-        ];
-      } else {
-        stats = [
-          { l: 'Awaiting QC', v: DB.orders.filter(o => ['goods_received', 'quality_check'].includes(o.status)).length, cls: 'sc-yellow', i: '🔍' },
-          { l: 'QC Failed', v: DB.orders.filter(o => o.status === 'quality_failed').length, cls: 'sc-red', i: '❌' },
-          { l: 'QC Passed', v: DB.orders.filter(o => ['billing', 'dispatched', 'completed'].includes(o.status)).length, cls: 'sc-green', i: '✅' },
-        ];
-      }
-
-      document.getElementById('dashStats').innerHTML = stats.map(s => `
-    <div class="stat-card ${s.cls}">
-      <div class="sc-icon">${s.i}</div>
-      <div class="sc-num">${s.v}</div>
-      <div class="sc-lbl">${s.l}</div>
-    </div>
-  `).join('');
-    }
-
-    function renderDashRecent() {
-      const orders = [...DB.orders].sort((a, b) => new Date(b.updated) - new Date(a.updated)).slice(0, 6);
-      document.getElementById('dashTbl').innerHTML = `
-    <thead><tr><th>Order #</th><th>Client</th><th>Source</th><th>Status</th><th>Priority</th><th>Updated</th><th></th></tr></thead>
-    <tbody>${orders.map(o => `
-      <tr onclick="viewOrder(${o.id})">
-        <td><span class="mono">${H(o.num)}</span></td>
-        <td><span class="strong">${H(o.cName)}</span></td>
-        <td><span class="src">${SRC_ICON[o.src] || '📋'} ${o.src.replace('_', ' ')}</span></td>
-        <td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td>
-        <td>${prioBadge(o.prio)}</td>
-        <td><span class="muted" style="font-size:12.5px">${timeAgo(o.updated)}</span></td>
-        <td><button class="btn btn-outline btn-xs">View →</button></td>
-      </tr>
-    `).join('')}</tbody>`;
-    }
-
-    // ================================================================
-    // ORDERS LIST
-    // ================================================================
-    function renderOrders() {
-      const q = (document.getElementById('srchOrders')?.value || '').toLowerCase();
-      const sf = document.getElementById('fStatus')?.value || '';
-      const src = document.getElementById('fSrc')?.value || '';
-      const r = ME.role;
-
-      let list = DB.orders.filter(o => {
-        if (r === 'partner' && o.partnerId !== ME.id) return false;
-        if (r === 'billing' && !['billing', 'dispatched', 'completed'].includes(o.status)) return false;
-        if (r === 'quality' && !['goods_received', 'quality_check', 'quality_failed', 'billing', 'dispatched', 'completed'].includes(o.status)) return false;
-        if (sf && o.status !== sf) return false;
-        if (src && o.src !== src) return false;
-        if (q && ![o.num, o.cName, o.desc].some(v => (v || '').toLowerCase().includes(q))) return false;
-        return true;
-      }).sort((a, b) => new Date(b.updated) - new Date(a.updated));
-
-      document.getElementById('ordCnt').textContent = `— ${list.length} order${list.length !== 1 ? 's' : ''}`;
-
-      const t = document.getElementById('ordersTbl');
-      if (!list.length) {
-        t.innerHTML = `<tbody><tr><td colspan="8"><div class="empty"><div class="empty-ico">📋</div><div>No orders found</div></div></td></tr></tbody>`;
-        return;
-      }
-
-      t.innerHTML = `
-    <thead><tr><th>Order #</th><th>Client</th><th>Source</th><th>Status</th><th>Priority</th><th>Partner</th><th>Amount</th><th>Updated</th></tr></thead>
-    <tbody>${list.map(o => `
-      <tr onclick="viewOrder(${o.id})">
-        <td><span class="mono">${H(o.num)}</span></td>
-        <td>
-          <div class="strong">${H(o.cName)}</div>
-          <div style="font-size:12px;color:var(--text4)">${H(o.cPhone || '')}</div>
-        </td>
-        <td><span class="src">${SRC_ICON[o.src] || '📋'} ${H(o.src.replace('_', ' '))}</span></td>
-        <td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td>
-        <td>${prioBadge(o.prio)}</td>
-        <td><span style="font-size:13px;color:var(--text3)">${o.pName || '<span style="color:var(--text5)">—</span>'}</span></td>
-        <td><span style="font-size:13.5px;color:var(--text2);font-weight:600">${fmtAmt(o.amt)}</span></td>
-        <td><span class="muted" style="font-size:12.5px">${timeAgo(o.updated)}</span></td>
-      </tr>
-    `).join('')}</tbody>`;
-    }
-
-    // ================================================================
-    // ORDER DETAIL
-    // ================================================================
-    function viewOrder(id) {
-      const o = DB.orders.find(x => x.id === id);
-      if (!o) return;
-      CUR_ORDER = o;
-
-      document.getElementById('dNum').textContent = o.num;
-      document.getElementById('dStatus').innerHTML = `<span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span>`;
-      document.getElementById('dPrio').innerHTML = prioBadge(o.prio);
-      document.getElementById('dMeta').textContent = `Created ${o.created} · Last updated ${timeAgo(o.updated)}`;
-
-      document.getElementById('dRows').innerHTML = [
-        ['Client', `<span class="strong">${H(o.cName)}</span>`],
-        ['Phone', H(o.cPhone || '—')],
-        ['Email', H(o.cEmail || '—')],
-        ['Source', `<span class="src">${SRC_ICON[o.src] || '📋'} ${H(o.src.replace('_', ' '))}</span>`],
-        ['Amount', o.amt > 0 ? `<span style="color:var(--green);font-weight:700">${fmtAmt(o.amt)}</span>` : 'Not set'],
-        ['Partner', o.pName ? `<span class="strong">${H(o.pName)}</span>` : `<span style="color:var(--text4)">Not assigned</span>`],
-      ].map(([l, v]) => `<div class="dr"><div class="dr-lbl">${l}</div><div class="dr-val">${v}</div></div>`).join('');
-
-      if (o.desc) {
-        document.getElementById('dDescBox').style.display = '';
-        document.getElementById('dDescBox').innerHTML = `<div class="desc-box"><div class="desc-label">Description</div><div class="desc-text">${H(o.desc)}</div></div>`;
-      } else { document.getElementById('dDescBox').style.display = 'none'; }
-
-      // Notes
-      const ns = [];
-      if (o.rejReason) ns.push({ cls: 'note-red', lbl: 'Rejection Reason', v: o.rejReason });
-      if (o.qNotes) ns.push({ cls: 'note-yellow', lbl: 'Quality Notes', v: o.qNotes });
-      if (o.bNotes) ns.push({ cls: 'note-blue', lbl: 'Billing Notes', v: o.bNotes });
-      if (o.dispInfo) ns.push({ cls: 'note-green', lbl: 'Dispatch Info', v: o.dispInfo });
-
-      if (ns.length) {
-        document.getElementById('notesCard').style.display = '';
-        document.getElementById('notesArea').innerHTML = ns.map(n => `
-      <div class="note-item ${n.cls}"><span class="note-label">${n.lbl}</span>${H(n.v)}</div>`).join('');
-      } else { document.getElementById('notesCard').style.display = 'none'; }
-
-      // Timeline
-      document.getElementById('dTimeline').innerHTML = o.timeline.map((t, i) => `
-    <div class="tl-item">
-      <div class="tl-dot ${t.latest ? 'latest' : t.fail ? 'fail' : t.done ? 'done' : ''}">${t.done && !t.latest ? '✓' : t.fail ? '✕' : ''}</div>
-      <div class="tl-body">
-        <div style="margin-bottom:4px"><span class="badge ${STATUS_COLOR[t.st] || 'b-gray'}" style="font-size:11px">${STATUS_LABEL[t.st] || t.st}</span></div>
-        <div class="tl-action">${H(t.act)}</div>
-        ${t.note ? `<div class="tl-note">${H(t.note)}</div>` : ''}
-        <div class="tl-meta">${H(t.by)} · ${t.at}</div>
-      </div>
-    </div>
-  `).join('');
-
-      // Progress
-      const ALL = ['received', 'credit_check', 'assigned', 'in_production', 'goods_received', 'quality_check', 'billing', 'dispatched', 'completed'];
-      const curI = ALL.indexOf(o.status);
-      document.getElementById('dProgress').innerHTML = ALL.map((s, i) => {
-        let cls = '';
-        if ((o.status === 'credit_rejected' && s === 'credit_check') || (o.status === 'quality_failed' && s === 'quality_check')) cls = 's-fail';
-        else if (i < curI) cls = 's-done';
-        else if (i === curI) cls = 's-active';
-        return `<div class="ps-item ${cls}">
-      <div class="ps-dot">${i < curI ? '✓' : i === curI ? '●' : '○'}</div>
-      <div class="ps-lbl">${STATUS_LABEL[s] || s}</div>
-    </div>`;
-      }).join('');
-
-      // Actions
-      buildActions(o);
-      go('order-detail');
-    }
-
-    function buildActions(o) {
-      const r = ME.role;
-      let btns = [];
-
-      if (r === 'admin') {
-        if (['received', 'credit_check'].includes(o.status)) {
-          btns.push({ key: 'approve_credit', lbl: '✅ Approve Credit', cls: 'btn-success' });
-          btns.push({ key: 'reject_credit', lbl: '❌ Reject / Hold', cls: 'btn-danger' });
-          btns.push({ key: '__assign', lbl: '👷 Assign to Partner', cls: 'btn-primary' });
-        }
-        if (o.status === 'assigned') btns.push({ key: 'start_prod', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
-        if (o.status === 'in_production') btns.push({ key: 'goods_recv', lbl: '📦 Mark Goods Received', cls: 'btn-primary' });
-        if (o.status === 'goods_received') btns.push({ key: 'start_qc', lbl: '🔍 Start Quality Check', cls: 'btn-primary' });
-        if (o.status === 'quality_check') {
-          btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
-          btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
-        }
-        if (o.status === 'quality_failed') btns.push({ key: '__assign', lbl: '👷 Reassign Partner', cls: 'btn-primary' });
-        if (o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
-        if (o.status === 'credit_rejected') btns.push({ key: 'approve_credit', lbl: '♻️ Re-approve Credit', cls: 'btn-warn' });
-      }
-
-      if (r === 'partner' && o.partnerId === ME.id) {
-        if (o.status === 'assigned') btns.push({ key: 'start_prod', lbl: '⚙️ Start Production', cls: 'btn-primary' });
-        if (['in_production', 'quality_failed'].includes(o.status)) btns.push({ key: 'goods_recv', lbl: '✅ Production Complete', cls: 'btn-success' });
-      }
-
-      if (r === 'quality') {
-        if (['goods_received', 'quality_check'].includes(o.status)) {
-          btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
-          btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
-        }
-      }
-
-      if (r === 'billing' && o.status === 'billing') {
-        btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
-      }
-
-      const area = document.getElementById('actArea');
-      if (!btns.length) {
-        area.innerHTML = `<p style="color:var(--text4);font-size:13.5px">No actions available for this order at your access level.</p>`;
-        return;
-      }
-      area.innerHTML = btns.map(b => `
-    <button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>
-  `).join('');
-    }
-
-    // ================================================================
-    // ORDER ACTIONS
-    // ================================================================
-    function triggerAct(key) {
-      if (key === '__assign') { openM('assignM'); return; }
-      PEND_ACTION = key;
-
-      const titles = {
-        approve_credit: '✅ Approve Credit Check',
-        reject_credit: '❌ Reject Order — Put On Hold',
-        start_prod: '⚙️ Mark Production Started',
-        goods_recv: '📦 Mark Goods Received',
-        start_qc: '🔍 Start Quality Check',
-        qc_pass: '✅ Quality Check — Pass',
-        qc_fail: '❌ Quality Check — Fail',
-        dispatch: '🚚 Bill & Dispatch Order',
-      };
-      document.getElementById('actTitle').textContent = titles[key] || key;
-      document.getElementById('actNotes').value = '';
-      document.getElementById('actAlert').innerHTML = '';
-
-      let extra = '';
-      if (key === 'qc_fail') extra = `<div class="field"><label>Failure Reason *</label><textarea id="qcReason" rows="3" placeholder="Describe what failed quality check..."></textarea></div>`;
-      if (key === 'reject_credit') extra = `<div class="field"><label>Rejection Reason</label><textarea id="rejReason" rows="3" placeholder="E.g. Pending payment of ₹X from previous order..."></textarea></div>`;
-      if (key === 'dispatch') extra = `
-    <div class="f-row">
-      <div class="field"><label>Final Invoice Amount (₹)</label><input type="number" id="dispAmt" placeholder="0.00"></div>
-      <div class="field"><label>Tracking / Dispatch Info</label><input type="text" id="dispInfo" placeholder="Courier + tracking number..."></div>
-    </div>`;
-      document.getElementById('actExtra').innerHTML = extra;
-      openM('actionM');
-    }
-
-    function doAction() {
-      const key = PEND_ACTION;
-      const notes = document.getElementById('actNotes').value.trim();
-      const o = CUR_ORDER;
-      const me = ME.name;
-      const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ', ' + new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-
-      const addLog = (st, act, note = null, fail = false) => {
-        o.timeline.forEach(t => { t.latest = false; });
-        o.timeline.push({ st, act, by: me, at: now, done: false, latest: true, ...(note ? { note } : {}), ...(fail ? { fail: true } : {}) });
-        o.status = st;
-        o.updated = new Date().toISOString().slice(0, 16).replace('T', ' ');
-      };
-
-      if (key === 'approve_credit') {
-        addLog('credit_check', '✅ Credit check approved. Ready to assign to a production partner.');
-        toast('Credit approved! Assign to a partner now.', 'success');
-      }
-      else if (key === 'reject_credit') {
-        const reason = (document.getElementById('rejReason')?.value || notes || 'Pending payment issues.');
-        o.rejReason = reason;
-        addLog('credit_rejected', '❌ Credit rejected. Order placed on hold. Client notified.', reason, true);
-        logNotif('email', o.num, o.id, o.cEmail, 'Order On Hold — Payment Pending');
-        logNotif('sms', o.num, o.id, o.cPhone, 'Order on hold notice');
-        toast('Order on hold. Client notified.', 'error');
-      }
-      else if (key === 'start_prod') {
-        addLog('in_production', '⚙️ Production started.');
-        toast('Production started!', 'success');
-      }
-      else if (key === 'goods_recv') {
-        addLog('goods_received', '📦 Production complete. Goods returned to Team A and logged.');
-        logNotif('email', o.num, o.id, 'team@wgs.com', 'Goods Ready for Quality Check');
-        toast('Goods received! Ready for QC.', 'success');
-      }
-      else if (key === 'start_qc') {
-        addLog('quality_check', '🔍 Quality check in progress.');
-        toast('QC started!', 'success');
-      }
-      else if (key === 'qc_pass') {
-        o.qNotes = notes || 'Passed quality inspection.';
-        addLog('billing', '✅ Quality check passed. Sent to billing.', notes || 'Passed quality inspection.');
-        logNotif('email', o.num, o.id, 'billing@company.com', 'Order Ready for Billing');
-        toast('QC passed! Sent to billing team.', 'success');
-      }
-      else if (key === 'qc_fail') {
-        const reason = document.getElementById('qcReason')?.value || notes || 'Quality not met.';
-        o.qNotes = reason;
-        addLog('quality_failed', '❌ Quality check FAILED. Returned to partner for rework.', reason, true);
-        if (o.partnerId) {
-          const p = DB.users.find(u => u.id === o.partnerId);
-          if (p) logNotif('email', o.num, o.id, p.email, 'Quality Check Failed — Rework Required');
-        }
-        toast('QC failed. Partner notified for rework.', 'error');
-      }
-      else if (key === 'dispatch') {
-        const da = document.getElementById('dispAmt')?.value;
-        const di = document.getElementById('dispInfo')?.value || notes || 'Order dispatched.';
-        if (da) o.amt = parseFloat(da);
-        o.dispInfo = di; o.bNotes = notes;
-        addLog('dispatched', '🚚 Order billed and dispatched.');
-        logNotif('email', o.num, o.id, o.cEmail, 'Your Order Has Been Dispatched!');
-        logNotif('sms', o.num, o.id, o.cPhone, 'Dispatch notification');
-        logNotif('email', o.num, o.id, 'team@wgs.com', 'Order Dispatched — Client Notified');
-        setTimeout(() => {
-          o.timeline.forEach(t => t.latest = false);
-          o.timeline.push({ st: 'completed', act: '✅ Order completed. Client notified via Email + SMS.', by: me, at: now, done: false, latest: true });
-          o.status = 'completed';
-          o.updated = new Date().toISOString().slice(0, 16).replace('T', ' ');
-          save(); renderDashStats(); renderDashRecent(); viewOrder(o.id);
-        }, 300);
-        toast('Order dispatched! Client notified via Email + SMS 📱', 'success');
-      }
-
-      save();
-      closeM('actionM');
-      renderDashStats();
-      renderDashRecent();
-      setTimeout(() => viewOrder(o.id), 150);
-    }
-
-    function doAssign() {
-      const pid = parseInt(document.getElementById('assignPsel').value);
-      const note = document.getElementById('assignNote').value.trim();
-      if (!pid) { toast('Please select a partner.', 'error'); return; }
-
-      const partner = DB.users.find(u => u.id === pid);
-      const o = CUR_ORDER;
-
-      o.partnerId = pid; o.pName = partner.name;
-      o.timeline.forEach(t => t.latest = false);
-      const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ', ' + new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-      o.timeline.push({ st: 'assigned', act: `👷 Assigned to ${partner.name}.${note ? ' Instructions: ' + note : ''}`, by: ME.name, at: now, done: false, latest: true, ...(note ? { note } : {}) });
-      o.status = 'assigned';
-      o.updated = new Date().toISOString().slice(0, 16).replace('T', ' ');
-
-      logNotif('email', o.num, o.id, partner.email, 'New Order Assigned to You');
-
-      save();
-      closeM('assignM');
-      document.getElementById('assignNote').value = '';
-      toast(`Assigned to ${partner.name}! Email notification sent.`, 'success');
-      renderDashStats();
-      viewOrder(o.id);
-    }
-
-    // ================================================================
-    // NOTIFICATION LOG HELPER
-    // ================================================================
-    function logNotif(type, ord, ordId, to, subj, status = 'sent') {
-      const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ', ' + new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-      DB.notifLog.unshift({ type, ord, ordId, to, subj, status, at: now });
-      save();
-    }
-
-    // ================================================================
-    // NEW ORDER
-    // ================================================================
-    function fillClient(sel) {
-      const opt = sel.options[sel.selectedIndex];
-      document.getElementById('no_name').value = opt.dataset.n || '';
-      document.getElementById('no_ph').value = opt.dataset.ph || '';
-      document.getElementById('no_em').value = opt.dataset.em || '';
-      const warn = opt.dataset.cr && opt.dataset.cr !== 'good';
-      document.getElementById('noAlert').innerHTML = warn
-        ? `<div class="alert alert-warn">⚠️ This client has a credit hold. Order will be auto-placed on hold.</div>` : '';
-    }
-
-    function submitOrder() {
-      const name = document.getElementById('no_name').value.trim();
-      const desc = document.getElementById('no_desc').value.trim();
-      if (!name) { toast('Client name is required.', 'error'); return; }
-      if (!desc) { toast('Order description is required.', 'error'); return; }
-
-      const cid = parseInt(document.getElementById('no_csel').value) || null;
-      const cl = cid ? DB.clients.find(c => c.id === cid) : null;
-      const hold = cl && cl.credit !== 'good';
-      const st = hold ? 'credit_rejected' : 'received';
-      const now2 = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ', ' + new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-      const now3 = new Date().toISOString().slice(0, 16).replace('T', ' ');
-
-      const ord = {
-        id: DB.nextId.order++,
-        num: genNum(),
-        clientId: cid,
-        cName: name,
-        cPhone: document.getElementById('no_ph').value.trim() || cl?.phone || '',
-        cEmail: document.getElementById('no_em').value.trim() || cl?.email || '',
-        src: document.getElementById('no_src').value,
-        desc,
-        status: st,
-        prio: document.getElementById('no_prio').value,
-        partnerId: null, pName: null,
-        amt: parseFloat(document.getElementById('no_amt').value) || 0,
-        by: ME.id, created: now3, updated: now3,
-        rejReason: hold ? 'Client has pending dues — credit hold in effect.' : '',
-        qNotes: '', bNotes: '', dispInfo: '',
-        timeline: [{
-          st, act: hold ? '❌ Order created but placed ON HOLD — client has pending dues.' : 'Order received and logged.',
-          by: ME.name, at: now2, done: false, latest: true, ...(hold ? { fail: true } : {})
-        }]
-      };
-
-      DB.orders.unshift(ord);
-      if (hold) { logNotif('email', ord.num, ord.id, ord.cEmail, 'Order On Hold — Payment Pending'); logNotif('sms', ord.num, ord.id, ord.cPhone, 'Order on hold'); }
-
-      // Reset
-      ['no_name', 'no_ph', 'no_em', 'no_desc', 'no_amt'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('no_csel').value = '';
-      document.getElementById('no_prio').value = 'normal';
-      document.getElementById('noAlert').innerHTML = '';
-
-      save();
-      renderDashStats();
-      renderDashRecent();
-      toast(hold ? `Order ${ord.num} placed ON HOLD.` : `Order ${ord.num} created!`, hold ? 'error' : 'success');
-      viewOrder(ord.id);
-    }
-
-    // ================================================================
-    // CLIENTS
-    // ================================================================
-    function renderClients() {
-      const q = (document.getElementById('srchClients')?.value || '').toLowerCase();
-      const cf = document.getElementById('fCredit')?.value || '';
-
-      const list = DB.clients.filter(c => {
-        if (cf && c.credit !== cf) return false;
-        if (q && !['name', 'company', 'phone', 'email'].some(k => (c[k] || '').toLowerCase().includes(q))) return false;
-        return true;
-      });
-
-      document.getElementById('clCnt').textContent = `— ${list.length} client${list.length !== 1 ? 's' : ''}`;
-
-      const admin = ME.role === 'admin';
-      document.getElementById('clientsTbl').innerHTML = `
-    <thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Email</th><th>Credit</th><th>Pending (₹)</th><th>Orders</th>${admin ? '<th>Actions</th>' : ''}</tr></thead>
-    <tbody>${list.map(c => `
-      <tr>
-        <td><span class="strong">${H(c.name)}</span></td>
-        <td><span class="muted">${H(c.company || '—')}</span></td>
-        <td style="font-size:13.5px">${H(c.phone || '—')}</td>
-        <td><span class="muted" style="font-size:13px">${H(c.email || '—')}</span></td>
-        <td>${creditChip(c.credit)}</td>
-        <td>${c.pending > 0 ? `<span style="color:var(--red);font-weight:700">₹${Number(c.pending).toLocaleString('en-IN')}</span>` : '—'}</td>
-        <td><span class="badge b-sky">${DB.orders.filter(o => o.clientId === c.id).length}</span></td>
-        ${admin ? `<td><button class="btn btn-outline btn-xs" onclick="editClient(${c.id});event.stopPropagation()">Edit</button></td>` : ''}
-      </tr>
-    `).join('')}</tbody>`;
-    }
-
-    function saveClient() {
-      const n = document.getElementById('cl_n').value.trim();
-      if (!n) { toast('Client name required.', 'error'); return; }
-      DB.clients.push({
-        id: DB.nextId.client++, name: n,
-        company: document.getElementById('cl_co').value.trim(),
-        phone: document.getElementById('cl_ph').value.trim(),
-        email: document.getElementById('cl_em').value.trim(),
-        credit: document.getElementById('cl_cr').value,
-        pending: parseFloat(document.getElementById('cl_pd').value) || 0,
-        notes: document.getElementById('cl_nt').value.trim(),
-      });
-      save();
-      closeM('clientM');
-      ['cl_n', 'cl_co', 'cl_ph', 'cl_em', 'cl_pd', 'cl_nt'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('cl_cr').value = 'good';
-      // Refresh dropdown
-      const csel = document.getElementById('no_csel');
-      const last = DB.clients[DB.clients.length - 1];
-      csel.innerHTML += `<option value="${last.id}" data-n="${H(last.name)}" data-ph="${H(last.phone || '')}" data-em="${H(last.email || '')}" data-cr="${last.credit}">${H(last.name)}</option>`;
-      renderClients();
-      toast('Client added!', 'success');
-    }
-
-    function editClient(id) {
-      const c = DB.clients.find(x => x.id === id);
-      if (!c) return;
-      document.getElementById('ec_id').value = id;
-      document.getElementById('ec_n').value = c.name;
-      document.getElementById('ec_co').value = c.company || '';
-      document.getElementById('ec_ph').value = c.phone || '';
-      document.getElementById('ec_em').value = c.email || '';
-      document.getElementById('ec_cr').value = c.credit;
-      document.getElementById('ec_pd').value = c.pending || '';
-      openM('editClientM');
-    }
-
-    function saveEditClient() {
-      const id = parseInt(document.getElementById('ec_id').value);
-      const n = document.getElementById('ec_n').value.trim();
-      if (!n) { toast('Name required.', 'error'); return; }
-      const c = DB.clients.find(x => x.id === id);
-      if (!c) return;
-      c.name = n; c.company = document.getElementById('ec_co').value.trim();
-      c.phone = document.getElementById('ec_ph').value.trim();
-      c.email = document.getElementById('ec_em').value.trim();
-      c.credit = document.getElementById('ec_cr').value;
-      c.pending = parseFloat(document.getElementById('ec_pd').value) || 0;
-      save(); closeM('editClientM'); renderClients();
-      toast('Client updated!', 'success');
-    }
-
-    // ================================================================
-    // TEAM (Restored with Edit / Delete / Toggle)
-    // ================================================================
-    function renderTeam() {
-      document.getElementById('teamTbl').innerHTML = `
-    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Last Login</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>${DB.users.map(u => `
-      <tr>
-        <td>
-          <span class="strong">${H(u.name)}</span>
-          ${u.id === ME.id ? `<span class="badge b-sky" style="font-size:10px;margin-left:6px">You</span>` : ''}
-        </td>
-        <td><span class="muted">${H(u.email)}</span></td>
-        <td style="font-size:13.5px">${H(u.phone || '—')}</td>
-        <td><span class="badge ${roleColor(u.role)}">${roleLabel(u.role)}</span></td>
-        <td><span class="muted" style="font-size:12.5px">${u.lastLogin || 'Never'}</span></td>
-        <td><span class="${u.active ? 'badge b-green' : 'badge b-red'}">${u.active ? '✅ Active' : '⛔ Inactive'}</span></td>
-        <td>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-outline btn-xs" onclick="openEditUser('${u.id}');event.stopPropagation()" title="Edit details, password, role">✏️ Edit</button>
-            <button class="btn btn-xs ${u.active ? 'btn-warn' : 'btn-success'}" onclick="toggleUserStatus('${u.id}');event.stopPropagation()" title="${u.active ? 'Deactivate user' : 'Activate user'}">${u.active ? '⛔ Disable' : '✅ Enable'}</button>
-          </div>
-        </td>
-      </tr>
-    `).join('')}</tbody>`;
-    }
-
-    function openEditUser(id) {
-      const u = DB.users.find(x => String(x.id) === String(id));
-      if (!u) return;
-      document.getElementById('eu_id').value = u.id;
-      document.getElementById('eu_n').value = u.name;
-      document.getElementById('eu_e').value = u.email;
-      document.getElementById('eu_ph').value = u.phone || '';
-      document.getElementById('eu_r').value = u.role;
-      document.getElementById('eu_p').value = '';
-      document.getElementById('euAlert').style.display = 'none';
-      document.getElementById('editUserTitle').textContent = `Edit — ${u.name}`;
-      document.getElementById('euDeleteBtn').style.display = (String(u.id) === String(ME.id)) ? 'none' : '';
-      openM('editUserM');
-    }
-
-    async function saveEditUser() {
-      const id = document.getElementById('eu_id').value;
-      const n = document.getElementById('eu_n').value.trim();
-      const e = document.getElementById('eu_e').value.trim();
-      const ph = document.getElementById('eu_ph').value.trim();
-      const r = document.getElementById('eu_r').value;
-      const pwd = document.getElementById('eu_p').value;
-
-      if (!n || !e) { toast('Name and email are required.', 'error'); return; }
-
-      const body = { name: n, email: e, phone: ph, role: r };
-      if (pwd) {
-        if (pwd.length < 6) { toast('Password must be at least 6 characters.', 'error'); return; }
-        body.password = pwd;
-      }
-
+    // ── AUTHENTICATION ─────────────────────────────────────
+    async function doLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass = document.getElementById('loginPass').value;
+      const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+      if (!slug) return authAlert('Enter your company workspace slug first.');
+      if (!email || !pass) return authAlert('Please enter email and password.');
+
+      setBtnLoading('btnPwd', true, 'Sign In →');
       try {
-        const updated = await api('PUT', `/users/${id}`, body);
-        const idx = DB.users.findIndex(x => String(x.id) === String(id));
-        if (idx >= 0) Object.assign(DB.users[idx], updated);
-        closeM('editUserM');
-        renderTeam();
-        toast('Team member updated!', 'success');
-      } catch (e) { toast(e.message, 'error'); }
+        const data = await api('POST', '/auth/login', { email, password: pass, company_slug: slug });
+        setToken(data.token);
+        loginSuccess(data.user, data.company?.slug, data.company?.name);
+      } catch (e) { authAlert(e.message); }
+      finally { setBtnLoading('btnPwd', false, 'Sign In →'); }
     }
-
-    async function toggleUserStatus(id) {
-      const u = DB.users.find(x => String(x.id) === String(id));
-      if (!u) return;
-      if (String(u.id) === String(ME.id)) { toast('You cannot disable your own account.', 'error'); return; }
-      const action = u.active ? 'disable' : 'enable';
-      if (!confirm(`Are you sure you want to ${action} ${u.name}?`)) return;
-      try {
-        await api('PATCH', `/users/${id}/toggle`);
-        const idx = DB.users.findIndex(x => String(x.id) === String(id));
-        if (idx >= 0) DB.users[idx].active = !DB.users[idx].active;
-        renderTeam();
-        toast(`${u.name} has been ${u.active ? 'deactivated' : 'activated'}.`, u.active ? 'error' : 'success');
-      } catch (e) { toast(e.message, 'error'); }
-    }
-
-    async function deleteUser() {
-      const id = document.getElementById('eu_id').value;
-      const u = DB.users.find(x => String(x.id) === String(id));
-      if (!u) return;
-      if (!confirm(`Permanently delete ${u.name}? This cannot be undone.`)) return;
-      try {
-        await api('DELETE', `/users/${id}`);
-        DB.users = DB.users.filter(x => String(x.id) !== String(id));
-        closeM('editUserM');
-        renderTeam();
-        toast(`${u.name} has been deleted.`, 'error');
-      } catch (e) { toast(e.message, 'error'); }
-    }
-
-    function saveUser() {
-      const n = document.getElementById('u_n').value.trim();
-      const e = document.getElementById('u_e').value.trim();
-      const p = document.getElementById('u_p').value;
-      if (!n || !e) { toast('Name and email required.', 'error'); return; }
-      if (!p) { toast('Password required.', 'error'); return; }
-      if (DB.users.find(u => u.email === e)) { toast('Email already exists.', 'error'); return; }
-
-      api('POST', '/users', { name: n, email: e, password: p, role: document.getElementById('u_r').value, phone: document.getElementById('u_ph').value.trim() })
-        .then(newUser => {
-          DB.users.push(newUser);
-          closeM('userM');
-          ['u_n', 'u_e', 'u_ph', 'u_p'].forEach(id => document.getElementById(id).value = '');
-          renderTeam();
-          toast('Team member added!', 'success');
-        })
-        .catch(e => toast(e.message, 'error'));
-    }
-
-    // ================================================================
-    // NOTIFICATION LOG
-    // ================================================================
-    function renderNotifLog() {
-      const total = DB.notifLog.length;
-      const sent = DB.notifLog.filter(n => n.status === 'sent').length;
-      const failed = DB.notifLog.filter(n => n.status === 'failed').length;
-      const emails = DB.notifLog.filter(n => n.type === 'email').length;
-      const sms = DB.notifLog.filter(n => n.type === 'sms').length;
-
-      document.getElementById('notifStats').innerHTML = [
-        { l: 'Total Sent', v: total, cls: 'sc-blue', i: '📨' },
-        { l: 'Delivered', v: sent, cls: 'sc-green', i: '✅' },
-        { l: 'Failed', v: failed, cls: 'sc-red', i: '❌' },
-        { l: 'Emails', v: emails, cls: 'sc-cyan', i: '📧' },
-        { l: 'SMS', v: sms, cls: 'sc-purple', i: '📱' },
-      ].map(s => `<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
-
-      document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `
-    <tr>
-      <td><span class="muted" style="font-size:12.5px">${n.at}</span></td>
-      <td>${n.type === 'email' ? `<span class="badge b-sky">📧 Email</span>` : `<span class="badge b-cyan">📱 SMS</span>`}</td>
-      <td><span class="mono" onclick="viewOrder(${n.ordId})" style="cursor:pointer">${H(n.ord)}</span></td>
-      <td><span class="muted" style="font-size:13px">${H(n.to || '—')}</span></td>
-      <td style="font-size:13px;color:var(--text2)">${H(n.subj)}</td>
-      <td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td>
-    </tr>
-  `).join('') || `<tr><td colspan="6"><div class="empty"><div class="empty-ico">🔔</div><div>No notifications yet</div></div></td></tr>`;
-    }
-
-    // ================================================================
-    // KEYBOARD + MISC
-    // ================================================================
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
-    });
-
-    document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-
-    // ── COMPANY REGISTRATION ──────────────────────────────────
-    function switchToRegister() { switchTab('reg'); }
 
     async function doRegister() {
       const company_name = document.getElementById('regCompany').value.trim();
@@ -3956,44 +2970,349 @@
       const password = document.getElementById('regPass').value;
       const phone = document.getElementById('regPhone').value.trim();
 
-      if (!company_name) { authAlert('Enter your company name'); return; }
-      if (!admin_name) { authAlert('Enter your name'); return; }
-      if (!email) { authAlert('Enter your email'); return; }
-      if (!password || password.length < 6) { authAlert('Password must be at least 6 characters'); return; }
+      if (!company_name || !admin_name || !email) return authAlert('Please fill in all required fields');
+      if (!password || password.length < 6) return authAlert('Password must be at least 6 characters');
 
       setBtnLoading('btnReg', true, 'Creating...');
       try {
-        const res = await fetch(`${API_BASE}/auth/register-company`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company_name, admin_name, email, password, phone })
-        });
-        const data = await res.json();
-        if (!res.ok) { authAlert(data.error || 'Registration failed'); return; }
-
-        // Show success with slug
+        const data = await api('POST', '/auth/register-company', { company_name, admin_name, email, password, phone });
         const rd = document.getElementById('regResult');
-        rd.style.display = '';
-        rd.style.background = '#f0fdf4';
-        rd.style.border = '1px solid #bbf7d0';
-        rd.style.color = '#166534';
-        rd.innerHTML = `✅ <strong>Workspace created!</strong><br>
-      Company: <strong>${data.company.name}</strong><br>
-      Your login slug: <code style="background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;font-size:14px">${data.company.slug}</code><br>
-      <span style="font-size:11px;color:#4b5563;margin-top:6px;display:block">📌 Save this slug — you and your team need it to log in every time.</span>`;
-
-        // Auto-login
+        rd.style.display = ''; rd.style.background = '#f0fdf4'; rd.style.border = '1px solid #bbf7d0'; rd.style.color = '#166534';
+        rd.innerHTML = `✅ <strong>Workspace created!</strong><br>Company: <strong>${data.company.name}</strong><br>Your login slug: <code style="background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;font-size:14px">${data.company.slug}</code>`;
         setToken(data.token);
-        localStorage.setItem('of_user', JSON.stringify(data.user));
         setTimeout(() => loginSuccess(data.user, data.company.slug, data.company.name), 1800);
-      } catch (e) {
-        authAlert('Cannot reach server: ' + e.message);
-      } finally {
-        setBtnLoading('btnReg', false, 'Create Company Workspace →');
-      }
+      } catch (e) { authAlert(e.message); }
+      finally { setBtnLoading('btnReg', false, 'Create Company Workspace →'); }
     }
 
-    // Auto-login on page load
+    function loginSuccess(user, companySlug, companyName) {
+      if (companySlug) setSlug(companySlug);
+      if (companyName) localStorage.setItem('of_company_name', companyName);
+      ME = user;
+      localStorage.setItem('of_user', JSON.stringify(user));
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('appScreen').classList.add('show');
+      setupApp();
+    }
+
+    function doLogout() {
+      clearToken();
+      document.getElementById('appScreen').classList.remove('show');
+      document.getElementById('authScreen').style.display = 'flex';
+      switchTab('pwd');
+    }
+
+    async function tryAutoLogin() {
+      const savedSlug = localStorage.getItem('of_slug');
+      if (savedSlug) COMPANY_SLUG = savedSlug;
+      const slugInput = document.getElementById('companySlug');
+      if (slugInput && savedSlug) slugInput.value = savedSlug;
+
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        const data = await api('GET', '/auth/me');
+        loginSuccess(data.user);
+      } catch (e) { clearToken(); }
+    }
+
+    // ================================================================
+    // APP SETUP & DATA FETCHING
+    // ================================================================
+    async function setupApp() {
+      document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
+      document.getElementById('sbNm').textContent = ME.name;
+      document.getElementById('sbRl').textContent = roleLabel(ME.role);
+      document.getElementById('sbCo').textContent = localStorage.getItem('of_company_name') || ME.company_name || '';
+      document.getElementById('topRole').textContent = roleLabel(ME.role);
+
+      const hr = new Date().getHours();
+      document.getElementById('wbGreet').textContent = `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ME.name.split(' ')[0]} 👋`;
+      document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = ME.role === 'admin' ? '' : 'none');
+
+      // FETCH REAL DATA FROM MONGODB
+      try {
+        const [orders, clients, users, notifs] = await Promise.all([
+          api('GET', '/orders'),
+          api('GET', '/clients'),
+          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),
+          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] })
+        ]);
+
+        DB.orders = orders.map(mapOrder);
+        DB.clients = clients.map(mapClient);
+        DB.users = users.map(mapUser);
+        DB.notifLog = notifs.logs || [];
+
+      } catch (e) { toast('Failed to load data. Please refresh.', 'error'); }
+
+      // Populate Dropdowns
+      const psel = document.getElementById('assignPsel');
+      psel.innerHTML = '<option value="">— Choose a Partner —</option>';
+      DB.users.filter(u => u.role === 'partner' && u.active).forEach(p => { psel.innerHTML += `<option value="${p.id}">${H(p.name)}</option>`; });
+
+      const csel = document.getElementById('no_csel');
+      csel.innerHTML = '<option value="">— New / Walk-in Client —</option>';
+      DB.clients.forEach(c => { csel.innerHTML += `<option value="${c.id}" data-n="${H(c.name)}" data-ph="${H(c.phone || '')}" data-em="${H(c.email || '')}" data-cr="${c.credit}">${H(c.name)} ${c.credit !== 'good' ? '⚠️' : ''}</option>`; });
+
+      const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
+      document.getElementById('pendBadge').textContent = pend;
+      document.getElementById('pendBadge').style.display = pend > 0 ? '' : 'none';
+
+      renderDashStats();
+      renderDashRecent();
+      renderNotifLog();
+      go('dashboard');
+    }
+
+    function go(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`pg-${page}`)?.classList.add('show');
+      document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
+
+      const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications' };
+      document.getElementById('topTitle').textContent = titles[page] || page;
+
+      if (page === 'orders') renderOrders();
+      if (page === 'clients') renderClients();
+      if (page === 'team') renderTeam();
+      if (window.innerWidth < 960) closeSidebar();
+      window.scrollTo(0, 0);
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('mob-open');
+      document.getElementById('mobBg').classList.toggle('show');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('mob-open');
+      document.getElementById('mobBg').classList.remove('show');
+    }
+
+    // ================================================================
+    // DASHBOARD
+    // ================================================================
+    function renderDashStats() {
+      const r = ME.role; let stats = [];
+      if (r === 'admin') {
+        stats = [
+          { l: 'Total Orders', v: DB.orders.length, cls: 'sc-blue', i: '📋' },
+          { l: 'Pending Review', v: DB.orders.filter(o => ['received', 'credit_check'].includes(o.status)).length, cls: 'sc-yellow', i: '⏳' },
+          { l: 'In Production', v: DB.orders.filter(o => ['assigned', 'in_production', 'goods_received', 'quality_check'].includes(o.status)).length, cls: 'sc-purple', i: '⚙️' },
+          { l: 'Completed', v: DB.orders.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅' }
+        ];
+      } else if (r === 'partner') {
+        const mine = DB.orders.filter(o => o.partnerId === ME.id);
+        stats = [
+          { l: 'New Assignments', v: mine.filter(o => o.status === 'assigned').length, cls: 'sc-yellow', i: '📌' },
+          { l: 'In Progress', v: mine.filter(o => o.status === 'in_production').length, cls: 'sc-purple', i: '⚙️' },
+          { l: 'QC Failed', v: mine.filter(o => o.status === 'quality_failed').length, cls: 'sc-red', i: '❌' }
+        ];
+      }
+      document.getElementById('dashStats').innerHTML = stats.map(s => `<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
+    }
+
+    function renderDashRecent() {
+      const orders = [...DB.orders].sort((a, b) => new Date(b.updated) - new Date(a.updated)).slice(0, 6);
+      document.getElementById('dashTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Updated</th></tr></thead><tbody>${orders.map(o => `
+        <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><span class="strong">${H(o.cName)}</span></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
+    }
+
+    // ================================================================
+    // ORDERS LIST
+    // ================================================================
+    function renderOrders() {
+      const q = (document.getElementById('srchOrders')?.value || '').toLowerCase();
+      const sf = document.getElementById('fStatus')?.value || '';
+      let list = DB.orders.filter(o => {
+        if (sf && o.status !== sf) return false;
+        if (q && ![o.num, o.cName].some(v => (v || '').toLowerCase().includes(q))) return false;
+        return true;
+      });
+      document.getElementById('ordCnt').textContent = `— ${list.length} orders`;
+      document.getElementById('ordersTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Partner</th><th>Updated</th></tr></thead><tbody>${list.map(o => `
+        <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><div class="strong">${H(o.cName)}</div></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${o.pName || '—'}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
+    }
+
+    // ================================================================
+    // NEW ORDER (Connected to API)
+    // ================================================================
+    function fillClient(sel) {
+      const opt = sel.options[sel.selectedIndex];
+      document.getElementById('no_name').value = opt.dataset.n || '';
+      document.getElementById('no_ph').value = opt.dataset.ph || '';
+      document.getElementById('no_em').value = opt.dataset.em || '';
+      document.getElementById('noAlert').innerHTML = (opt.dataset.cr && opt.dataset.cr !== 'good') ? `<div class="alert alert-warn">⚠️ Client has a credit hold.</div>` : '';
+    }
+
+    async function submitOrder() {
+      const name = document.getElementById('no_name').value.trim();
+      const desc = document.getElementById('no_desc').value.trim();
+      if (!name || !desc) return toast('Name and description required.', 'error');
+
+      const cid = document.getElementById('no_csel').value || null;
+      const body = {
+        clientId: cid, clientName: name, clientPhone: document.getElementById('no_ph').value.trim(),
+        clientEmail: document.getElementById('no_em').value.trim(), source: document.getElementById('no_src').value,
+        description: desc, priority: document.getElementById('no_prio').value, amount: parseFloat(document.getElementById('no_amt').value) || 0
+      };
+
+      try {
+        const res = await api('POST', '/orders', body);
+        DB.orders.unshift(mapOrder(res));
+        ['no_name', 'no_ph', 'no_em', 'no_desc', 'no_amt', 'no_csel'].forEach(id => document.getElementById(id).value = '');
+        toast(`Order ${res.order_number} created!`, 'success');
+        setupApp(); // Refresh counts
+        viewOrder(res._id);
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ================================================================
+    // ORDER DETAIL & ACTIONS (Connected to API)
+    // ================================================================
+    function viewOrder(id) {
+      const o = DB.orders.find(x => String(x.id) === String(id));
+      if (!o) return; CUR_ORDER = o;
+
+      document.getElementById('dNum').textContent = o.num;
+      document.getElementById('dStatus').innerHTML = `<span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span>`;
+      document.getElementById('dRows').innerHTML = [
+        ['Client', `<span class="strong">${H(o.cName)}</span>`], ['Amount', fmtAmt(o.amt)], ['Partner', o.pName || '—']
+      ].map(([l, v]) => `<div class="dr"><div class="dr-lbl">${l}</div><div class="dr-val">${v}</div></div>`).join('');
+
+      if (o.desc) { document.getElementById('dDescBox').style.display = ''; document.getElementById('dDescBox').innerHTML = `<div class="desc-box"><div class="desc-label">Description</div><div class="desc-text">${H(o.desc)}</div></div>`; }
+
+      document.getElementById('dTimeline').innerHTML = o.timeline.map((t) => `<div class="tl-item"><div class="tl-dot ${t.latest ? 'latest' : t.fail ? 'fail' : ''}"></div><div class="tl-body"><div class="tl-action">${H(t.act)}</div><div class="tl-meta">${H(t.by)} · ${t.at}</div></div></div>`).join('');
+
+      buildActions(o); go('order-detail');
+    }
+
+    function buildActions(o) {
+      let btns = [];
+      if (ME.role === 'admin' && ['received', 'credit_check'].includes(o.status)) {
+        btns.push({ key: 'approve_credit', lbl: '✅ Approve Credit', cls: 'btn-success' });
+        btns.push({ key: 'reject_credit', lbl: '❌ Reject / Hold', cls: 'btn-danger' });
+        btns.push({ key: '__assign', lbl: '👷 Assign Partner', cls: 'btn-primary' });
+      }
+      if (ME.role === 'admin' && o.status === 'assigned') btns.push({ key: 'start_prod', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
+      if (ME.role === 'admin' && o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
+
+      document.getElementById('actArea').innerHTML = btns.map(b => `<button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>`).join('') || `<p class="muted">No actions available.</p>`;
+    }
+
+    function triggerAct(key) {
+      if (key === '__assign') return openM('assignM');
+      PEND_ACTION = key; document.getElementById('actNotes').value = ''; document.getElementById('actExtra').innerHTML = '';
+      if (key === 'dispatch') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Dispatch Info</label><input type="text" id="dispInfo"></div>`;
+      openM('actionM');
+    }
+
+    async function doAction() {
+      const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
+      if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
+
+      try {
+        const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, body);
+        const updated = mapOrder(res);
+        const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
+        if (idx > -1) DB.orders[idx] = updated;
+        closeM('actionM'); toast('Action completed successfully!', 'success');
+        setupApp(); viewOrder(CUR_ORDER.id);
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function doAssign() {
+      const pid = document.getElementById('assignPsel').value;
+      if (!pid) return toast('Select a partner', 'error');
+      try {
+        const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, { actionKey: 'assign_partner', partnerId: pid, notes: document.getElementById('assignNote').value });
+        const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
+        if (idx > -1) DB.orders[idx] = mapOrder(res);
+        closeM('assignM'); toast('Partner Assigned!', 'success');
+        setupApp(); viewOrder(CUR_ORDER.id);
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ================================================================
+    // CLIENTS (Connected to API)
+    // ================================================================
+    function renderClients() {
+      document.getElementById('clCnt').textContent = `— ${DB.clients.length} clients`;
+      document.getElementById('clientsTbl').innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Credit</th>${ME.role === 'admin' ? '<th>Actions</th>' : ''}</tr></thead><tbody>${DB.clients.map(c => `
+        <tr><td><span class="strong">${H(c.name)}</span></td><td><span class="muted">${H(c.email || '—')}</span></td><td>${creditChip(c.credit)}</td>${ME.role === 'admin' ? `<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}')">Edit</button></td>` : ''}</tr>`).join('')}</tbody>`;
+    }
+
+    async function saveClient() {
+      const name = document.getElementById('cl_n').value.trim();
+      if (!name) return toast('Client name required.', 'error');
+      try {
+        const res = await api('POST', '/clients', { name, company: document.getElementById('cl_co').value, email: document.getElementById('cl_em').value, phone: document.getElementById('cl_ph').value, credit_status: document.getElementById('cl_cr').value });
+        DB.clients.push(mapClient(res)); closeM('clientM'); renderClients(); toast('Client added!', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function editClient(id) {
+      const c = DB.clients.find(x => String(x.id) === String(id)); if (!c) return;
+      document.getElementById('ec_id').value = id; document.getElementById('ec_n').value = c.name; document.getElementById('ec_cr').value = c.credit; openM('editClientM');
+    }
+
+    async function saveEditClient() {
+      const id = document.getElementById('ec_id').value;
+      try {
+        const res = await api('PUT', `/clients/${id}`, { name: document.getElementById('ec_n').value, credit_status: document.getElementById('ec_cr').value });
+        const idx = DB.clients.findIndex(x => String(x.id) === String(id));
+        if (idx > -1) DB.clients[idx] = mapClient(res);
+        closeM('editClientM'); renderClients(); toast('Client updated!', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ================================================================
+    // USERS / TEAM (Connected to API)
+    // ================================================================
+    function renderTeam() {
+      document.getElementById('teamTbl').innerHTML = `<thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>${DB.users.map(u => `
+        <tr><td><span class="strong">${H(u.name)}</span></td><td><span class="badge ${roleColor(u.role)}">${roleLabel(u.role)}</span></td><td><span class="${u.active ? 'badge b-green' : 'badge b-red'}">${u.active ? '✅ Active' : '⛔ Inactive'}</span></td>
+        <td><button class="btn btn-outline btn-xs" onclick="openEditUser('${u.id}')">✏️ Edit</button></td></tr>`).join('')}</tbody>`;
+    }
+
+    async function saveUser() {
+      try {
+        const res = await api('POST', '/users', { name: document.getElementById('u_n').value, email: document.getElementById('u_e').value, password: document.getElementById('u_p').value, role: document.getElementById('u_r').value });
+        DB.users.push(mapUser(res)); closeM('userM'); renderTeam(); toast('Team member added!', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function openEditUser(id) {
+      const u = DB.users.find(x => String(x.id) === String(id)); if (!u) return;
+      document.getElementById('eu_id').value = u.id; document.getElementById('eu_n').value = u.name; document.getElementById('eu_r').value = u.role;
+      document.getElementById('euDeleteBtn').style.display = String(u.id) === String(ME.id) ? 'none' : ''; openM('editUserM');
+    }
+
+    async function saveEditUser() {
+      const id = document.getElementById('eu_id').value;
+      try {
+        const res = await api('PUT', `/users/${id}`, { name: document.getElementById('eu_n').value, role: document.getElementById('eu_r').value, email: document.getElementById('eu_e').value });
+        const idx = DB.users.findIndex(x => String(x.id) === String(id));
+        if (idx > -1) Object.assign(DB.users[idx], mapUser(res));
+        closeM('editUserM'); renderTeam(); toast('Team member updated!', 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function deleteUser() {
+      const id = document.getElementById('eu_id').value;
+      if (!confirm(`Permanently delete this user?`)) return;
+      try { await api('DELETE', `/users/${id}`); DB.users = DB.users.filter(x => String(x.id) !== String(id)); closeM('editUserM'); renderTeam(); toast('User deleted.', 'error'); } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function renderNotifLog() {
+      document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `<tr><td><span class="muted" style="font-size:12.5px">${n.at}</span></td><td><span class="badge b-sky">${n.type}</span></td><td><span class="muted">${H(n.to)}</span></td><td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td></tr>`).join('');
+    }
+
+    // Init
     tryAutoLogin();
   </script>
 </body>
