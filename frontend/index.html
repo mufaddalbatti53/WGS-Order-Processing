@@ -3002,16 +3002,22 @@ function renderNotifLog() {
     { l:'SMS',         v:sms,    cls:'sc-purple', i:'📱' },
   ].map(s=>`<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
 
-  document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0,50).map(n=>`
-    <tr>
-      <td><span class="muted" style="font-size:12.5px">${n.at}</span></td>
-      <td>${n.type==='email'?`<span class="badge b-sky">📧 Email</span>`:`<span class="badge b-cyan">📱 SMS</span>`}</td>
-      <td><span class="mono" onclick="viewOrder(${n.ordId})" style="cursor:pointer">${H(n.ord)}</span></td>
-      <td><span class="muted" style="font-size:13px">${H(n.to||'—')}</span></td>
-      <td style="font-size:13px;color:var(--text2)">${H(n.subj)}</td>
-      <td>${n.status==='sent'?`<span class="badge b-green">✅ Sent</span>`:`<span class="badge b-red">❌ Failed</span>`}</td>
-    </tr>
-  `).join('') || `<tr><td colspan="6"><div class="empty"><div class="empty-ico">🔔</div><div>No notifications yet</div></div></td></tr>`;
+  document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0,50).map(n => {
+    const typeLabel = n.type === 'email'
+      ? '<span class="badge b-sky">📧 Email</span>'
+      : '<span class="badge b-cyan">📱 SMS</span>';
+    const statusLabel = n.status === 'sent'
+      ? '<span class="badge b-green">✅ Sent</span>'
+      : '<span class="badge b-red">❌ Failed</span>';
+    return '<tr>' +
+        '<td><span class="muted" style="font-size:12.5px">' + n.at + '</span></td>' +
+        '<td>' + typeLabel + '</td>' +
+        '<td><span class="mono" onclick="viewOrder(\'' + n.ordId + '\')" style="cursor:pointer">' + H(n.ord) + '</span></td>' +
+        '<td><span class="muted" style="font-size:13px">' + H(n.to||'—') + '</span></td>' +
+        '<td style="font-size:13px;color:var(--text2)">' + H(n.subj) + '</td>' +
+        '<td>' + statusLabel + '</td>' +
+      '</tr>';
+  }).join('') || `<tr><td colspan="6"><div class="empty"><div class="empty-ico">🔔</div><div>No notifications yet</div></div></td></tr>`;
 }
 
 // ================================================================
@@ -3060,10 +3066,11 @@ async function doRegister() {
     rd.style.background = '#f0fdf4';
     rd.style.border = '1px solid #bbf7d0';
     rd.style.color = '#166534';
-    rd.innerHTML = `✅ <strong>Workspace created!</strong><br>
-      Company: <strong>${data.company.name}</strong><br>
-      Your login slug: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700">${data.company.slug}</code><br>
-      <span style="font-size:11px;color:#4b5563;margin-top:4px;display:block">Save this slug — you need it every time you log in.</span>`;
+    rd.innerHTML =
+      '✅ <strong>Workspace created!</strong><br>' +
+      'Company: <strong>' + H(data.company.name) + '</strong><br>' +
+      'Your login slug: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700">' + H(data.company.slug) + '</code><br>' +
+      '<span style="font-size:11px;color:#4b5563;margin-top:4px;display:block">Save this slug — you need it every time you log in.</span>';
 
     // Auto-login
     setToken(data.token);
