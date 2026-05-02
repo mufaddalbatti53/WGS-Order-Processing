@@ -491,6 +491,8 @@ a:hover { color: var(--blue-700); }
 .content {
   padding: 28px;
   flex: 1;
+  overflow-y: auto;
+  height: calc(100vh - var(--topbar-h));
 }
 
 /* Pages */
@@ -1183,7 +1185,7 @@ html, body { height: 100%; overflow: hidden; }
   html { font-size: 16px; }
 }
 
-/* Ensure main content area fits viewport */
+/* Ensure app layout fits viewport */
 #appScreen {
   display: none;
   height: 100vh;
@@ -1192,10 +1194,9 @@ html, body { height: 100%; overflow: hidden; }
 }
 #appScreen.show { display: flex; }
 
-.main-content {
-  flex: 1;
-  overflow-y: auto;
+.main {
   height: 100vh;
+  overflow: hidden;
 }
 </style>
 </head>
