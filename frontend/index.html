@@ -2069,94 +2069,178 @@
    (Paste at the very bottom of <style>)
    ============================================================= */
 @media (max-width: 768px) {
-  
-  /* 1. Animated, Premium Hero Banner */
-  .welcome-banner {
-    border-radius: 24px !important;
-    padding: 28px 24px !important;
-    box-shadow: 0 16px 32px rgba(2, 132, 199, 0.25) !important;
-    margin-bottom: 28px !important;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  .wb-greeting { font-size: 26px !important; line-height: 1.2; margin-bottom: 8px; }
-  .wb-sub { font-size: 14px !important; opacity: 0.9; }
-  
-  /* Make the background shapes "breathe" */
-  @keyframes floatShape {
-    0% { transform: translateY(0px) scale(1); }
-    50% { transform: translateY(-10px) scale(1.05); }
-    100% { transform: translateY(0px) scale(1); }
-  }
-  .welcome-banner::before, .welcome-banner::after {
-    animation: floatShape 6s ease-in-out infinite;
-  }
+  /* Disable animations that break position:fixed on mobile */
+  .page.show { animation: none !important; transform: none !important; }
 
-  /* 2. Sleek, App-like Stat Widgets */
+  /* 3. Glassmorphism App Header */
+  .topbar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-title { font-size: 18px; }
+
+  /* =========================================================
+     4. NO HORIZONTAL SCROLLING: 2-Column Stats Grid
+     ========================================================= */
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* Perfect 2x2 or 2x3 grid */
+    gap: 12px !important;
+    overflow-x: hidden !important; /* Locks width */
+    margin: 0 !important;
+    padding: 0 !important;
+  }
   .stat-card {
-    border-radius: 22px !important;
-    border: none !important;
-    background: #fff !important;
-    box-shadow: 0 8px 20px rgba(15, 45, 82, 0.06) !important;
-    padding: 20px !important;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    min-width: 0 !important;
+    width: 100% !important;
+    padding: 16px !important;
   }
-  /* Remove the old top border line */
-  .stat-card::after { display: none !important; }
-  
-  /* Make the stat numbers massive and tight */
-  .sc-num { font-size: 42px !important; margin-bottom: 8px !important; }
-  .sc-lbl { font-size: 11px !important; font-weight: 800 !important; color: var(--text3) !important; }
+  .sc-num { font-size: 32px !important; } /* Slightly scale down to fit 2 columns */
 
-  /* 3. Redesign 'Recent Orders' into a Modern Activity Feed */
+  /* =========================================================
+     5. NO HORIZONTAL SCROLLING: Vertical Flow Timeline
+     ========================================================= */
+  .flow-wrap {
+    overflow-x: hidden !important;
+    padding: 16px !important;
+    margin: 0 !important;
+  }
+  .flow {
+    display: flex !important;
+    flex-direction: column !important; /* Stack vertically! */
+    align-items: flex-start !important;
+    min-width: 0 !important;
+    gap: 0 !important;
+  }
+  /* Hide the old horizontal lines from HTML */
+  .flow > div:not(.flow-node) { display: none !important; }
+  
+  /* Re-layout the nodes for a vertical list */
+  .flow-node {
+    flex-direction: row !important; /* Icon left, Text right */
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+    padding: 16px 0 !important;
+    position: relative;
+  }
+  .flow-label { text-align: left !important; font-size: 15px !important; max-width: none !important; }
+  .flow-sublabel { text-align: left !important; font-size: 13px !important; margin-top: 2px; }
+  
+  /* Draw a beautiful vertical connecting line between the circles */
+  .flow-node:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 27px; /* perfectly centers behind the 56px circle */
+    top: 56px; 
+    bottom: -16px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--sky-xl), var(--border2));
+    z-index: 0;
+  }
+  .flow-circle { z-index: 1; background: #fff !important; } /* Keep circles above the line */
+
+
+  /* 6. Floating Action Button (FAB) for "+ New Order" */
+  .filter-bar .btn-primary, .wb-btn .btn-outline {
+    position: fixed !important;
+    bottom: 24px !important; right: 24px !important;
+    width: 60px !important; height: 60px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    font-size: 0px !important; 
+    background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
+    z-index: 9999 !important;
+  }
+  .filter-bar .btn-primary::after, .wb-btn .btn-outline::after {
+    content: '+';
+    font-size: 32px; font-weight: 300; margin-bottom: 2px;
+  }
+
+  /* 7. Full bleed content area */
+  .content { padding: 16px; overflow-x: hidden; }
+  
+  /* Animated, Premium Hero Banner */
+  .welcome-banner {
+    border-radius: 20px !important;
+    padding: 24px 20px !important;
+    box-shadow: 0 12px 24px rgba(2, 132, 199, 0.2) !important;
+    margin-bottom: 24px !important;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-direction: column; 
+    align-items: flex-start; 
+  }
+  .wb-greeting { font-size: 24px !important; line-height: 1.2; margin-bottom: 6px; }
+  
+  /* Filter bar stacking */
+  .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-bar input, .filter-bar select { min-width: unset; width: 100%; font-size: 16px !important; }
+  
+  .order-hero { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+  /* 8. Mobile Tables (Cards instead of rows) */
+  .tbl thead { display: none; }
+  .tbl tbody tr {
+    display: flex; flex-direction: column; padding: 16px 0;
+    border-bottom: 1px solid var(--border3) !important; position: relative;
+  }
+  .tbl td {
+    padding: 4px 16px !important; border: none !important;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  
+  /* Custom labels for table rows based on context */
+  #dashTbl td:nth-child(1)::before { content: "Order #"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(2)::before { content: "Client"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(3)::before { content: "Status"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(4)::before { content: "Updated"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  
+  #ordersTbl td:nth-child(1)::before { content: "Order #"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(2)::before { content: "Client"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(3)::before { content: "Status"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(4)::before { content: "Partner"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(5)::before { content: "Updated"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+
+  /* Forms fixes */
+  .field input, .field select, .field textarea { font-size: 16px !important; padding: 14px; }
+  
+  /* Order Detail Cards */
+  .dr { grid-template-columns: 1fr; gap: 2px; padding: 12px 16px; }
+  .dr-lbl { font-size: 10px; }
+  .tl-item { padding-bottom: 24px; }
+}
+
+/* Include the Premium Activity Feed for DashTbl from the previous step! */
+@media (max-width: 768px) {
   #dashTbl { display: block; }
   #dashTbl tbody { display: flex; flex-direction: column; gap: 12px; }
-  
-  /* Turn rows into floating iOS-style list tiles */
   #dashTbl tbody tr {
-    background: #fff !important;
-    border-radius: 18px !important;
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(15,45,82,0.05) !important;
-    padding: 16px !important;
-    display: grid !important;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    gap: 8px;
-    align-items: center;
+    background: #fff !important; border-radius: 18px !important; border: none !important;
+    box-shadow: 0 4px 12px rgba(15,45,82,0.05) !important; padding: 16px !important;
+    display: grid !important; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 8px; align-items: center;
   }
-  
-  /* Hide the pseudo-labels (Order #, Client) we added earlier for this specific widget */
   #dashTbl td::before { display: none !important; }
   #dashTbl td { padding: 0 !important; display: flex !important; align-items: center; }
-
-  /* Position the data perfectly into the 4 corners of the card */
-  /* Top Left: Order Number */
   #dashTbl td:nth-child(1) { grid-column: 1; grid-row: 1; }
   #dashTbl td:nth-child(1) .mono { font-size: 16px !important; color: var(--text); }
-  
-  /* Top Right: Status Badge */
   #dashTbl td:nth-child(3) { grid-column: 2; grid-row: 1; justify-content: flex-end; }
-  
-  /* Bottom Left: Client Name */
   #dashTbl td:nth-child(2) { grid-column: 1; grid-row: 2; }
   #dashTbl td:nth-child(2) .strong { font-size: 13.5px !important; color: var(--text3); font-weight: 600; }
-  
-  /* Bottom Right: Time Updated */
   #dashTbl td:nth-child(4) { grid-column: 2; grid-row: 2; justify-content: flex-end; }
   #dashTbl td:nth-child(4) .muted { font-size: 12px !important; color: var(--text4); }
 
-  /* Remove desktop card borders from the dashboard to let widgets breathe */
-  #pg-dashboard .card {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-  #pg-dashboard .card-top {
-    padding: 12px 4px 16px !important;
-    border: none !important;
-  }
+  #pg-dashboard .card { background: transparent !important; border: none !important; box-shadow: none !important; }
+  #pg-dashboard .card-top { padding: 12px 4px 16px !important; border: none !important; }
   #pg-dashboard .card-top h3 { font-size: 18px !important; font-weight: 800 !important; }
 }
   </style>
