@@ -1906,61 +1906,72 @@
 }
 
 @media (max-width: 768px) {
-  /* 1. Native App Header (Sticky & Blurred like iOS) */
-  .topbar {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    padding: 0 16px;
-  }
-
-  /* 2. Horizontal Scrollable Stats (Swipe left/right) */
-  .stats-grid {
-    display: flex !important;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px;
-    gap: 12px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .stats-grid::-webkit-scrollbar { display: none; }
-  .stat-card {
-    min-width: 150px;
-    scroll-snap-align: start;
-    flex-shrink: 0;
-    padding: 16px;
-  }
-
-  /* 3. Floating Action Button (FAB) for "+ New Order" */
+  /* 1. Fix the Floating Button Bug */
+  /* The page fade-in animation traps fixed elements. We disable the transform on mobile so the button floats properly. */
+  .page.show { animation: none !important; transform: none !important; }
+  
   .filter-bar .btn-primary, .wb-btn .btn-outline {
-    position: fixed;
-    bottom: 24px; right: 24px;
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0px; 
+    position: fixed !important;
+    bottom: 24px !important; 
+    right: 24px !important;
+    width: 60px !important; 
+    height: 60px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+    font-size: 0px !important; /* Hides the text */
     background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
     color: white !important;
     border: none !important;
     box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
-    z-index: 900;
+    z-index: 9999 !important;
   }
   .filter-bar .btn-primary::after, .wb-btn .btn-outline::after {
     content: '+';
     font-size: 32px; font-weight: 300; margin-bottom: 2px;
   }
 
+  /* 2. Fix the microscopic Order Flow Pipeline */
+  /* This prevents squishing and forces horizontal swiping */
+  .flow-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 16px !important;
+  }
+  .flow {
+    min-width: 800px !important; /* Forces natural width so it doesn't shrink */
+  }
+
+  /* 3. Make Stats grid swipeable instead of wrapping */
+  .stats-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px;
+    gap: 12px;
+  }
+  .stats-grid::-webkit-scrollbar { display: none; }
+  .stat-card {
+    min-width: 150px !important;
+    scroll-snap-align: start;
+    flex-shrink: 0 !important;
+  }
+
+  /* 4. Glassmorphism Header */
+  .topbar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0 16px;
+  }
+  
   .content { padding: 16px; }
-  .welcome-banner { flex-direction: column; gap: 14px; align-items: flex-start; padding: 20px; }
-  .filter-bar { flex-direction: column; align-items: stretch; }
-  .filter-bar input { min-width: unset; }
   .order-hero { flex-direction: column; }
 }
-
 @media (max-width: 640px) {
   /* =========================================================
      TRUE MOBILE LOGIN SCREEN
