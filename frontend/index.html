@@ -1896,198 +1896,174 @@
     /* =============================================================
    NATIVE MOBILE APP OVERRIDES
    ============================================================= */
-    @media (max-width: 960px) {
-      .sidebar {
-        transform: translateX(-100%);
-      }
+    /* =============================================================
+   NATIVE MOBILE APP OVERRIDES (Dashboard & Inner App)
+   ============================================================= */
+@media (max-width: 960px) {
+  /* 1. Sidebar becomes an off-canvas mobile drawer */
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px; /* Slightly wider for touch targets */
+    box-shadow: none;
+    transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  .sidebar.mob-open {
+    transform: translateX(0);
+    box-shadow: 12px 0 40px rgba(15,45,82,0.15);
+  }
+  
+  /* 2. Main content expands to full width */
+  .main { margin-left: 0; }
+  
+  /* Show hamburger menu */
+  .menu-btn { display: flex; }
+  
+  /* Fix grid layouts for mobile forms */
+  .order-split { grid-template-columns: 1fr; }
+  .f-row { grid-template-columns: 1fr; gap: 0; }
+}
 
-      .sidebar.mob-open {
-        transform: translateX(0);
-        box-shadow: 8px 0 40px rgba(15, 45, 82, 0.12);
-      }
+@media (max-width: 768px) {
+  /* Disable animations that break position:fixed on mobile */
+  .page.show { animation: none !important; transform: none !important; }
 
-      .main {
-        margin-left: 0;
-      }
+  /* 3. Glassmorphism App Header */
+  .topbar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-title { font-size: 18px; }
 
-      .menu-btn {
-        display: flex;
-      }
+  /* 4. Horizontal Scrollable Stats (Swipe left/right) */
+  .stats-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 12px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-right: -16px; /* Let it bleed to the edge of the screen */
+    padding-right: 16px;
+  }
+  .stats-grid::-webkit-scrollbar { display: none; }
+  .stat-card {
+    min-width: 160px !important;
+    scroll-snap-align: start;
+    flex-shrink: 0 !important;
+  }
 
-      .order-split {
-        grid-template-columns: 1fr;
-      }
+  /* 5. Fix the microscopic Order Flow Pipeline */
+  .flow-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 16px !important;
+    margin: 0 -16px;
+    padding: 24px 16px !important;
+  }
+  .flow { min-width: 800px !important; }
 
-      .f-row {
-        grid-template-columns: 1fr;
-      }
-    }
+  /* 6. Floating Action Button (FAB) for "+ New Order" */
+  .filter-bar .btn-primary, .wb-btn .btn-outline {
+    position: fixed !important;
+    bottom: 24px !important; right: 24px !important;
+    width: 60px !important; height: 60px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    font-size: 0px !important; 
+    background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
+    z-index: 9999 !important;
+  }
+  .filter-bar .btn-primary::after, .wb-btn .btn-outline::after {
+    content: '+';
+    font-size: 32px; font-weight: 300; margin-bottom: 2px;
+  }
 
-    @media (max-width: 768px) {
+  /* 7. Full bleed content area */
+  .content { padding: 16px; }
+  
+  .welcome-banner { 
+    flex-direction: column; 
+    gap: 14px; 
+    align-items: flex-start; 
+    padding: 20px; 
+    border-radius: 16px;
+  }
+  
+  /* Filter bar stacking */
+  .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-bar input, .filter-bar select { min-width: unset; width: 100%; font-size: 16px !important; }
+  
+  .order-hero { flex-direction: column; align-items: flex-start; gap: 12px; }
 
-      /* Disable animations that break position:fixed on mobile */
-      .page.show {
-        animation: none !important;
-        transform: none !important;
-      }
+  /* 8. Mobile Tables (Cards instead of rows) */
+  /* Hide the desktop table headers */
+  .tbl thead { display: none; }
+  .tbl tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border3) !important;
+    position: relative;
+  }
+  .tbl td {
+    padding: 4px 16px !important;
+    border: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Label on left, value on right */
+  }
+  
+  /* Custom labels for table rows based on context */
+  #dashTbl td:nth-child(1)::before { content: "Order #"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(2)::before { content: "Client"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(3)::before { content: "Status"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #dashTbl td:nth-child(4)::before { content: "Updated"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  
+  #ordersTbl td:nth-child(1)::before { content: "Order #"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(2)::before { content: "Client"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(3)::before { content: "Status"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(4)::before { content: "Partner"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+  #ordersTbl td:nth-child(5)::before { content: "Updated"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
 
-      /* Glassmorphism Header */
-      .topbar {
-        background: rgba(255, 255, 255, 0.85) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        padding: 0 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      }
+  /* Forms fixes */
+  .field input, .field select, .field textarea {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+    padding: 14px;
+  }
+  
+  /* Order Detail Cards */
+  .dr { grid-template-columns: 1fr; gap: 2px; padding: 12px 16px; }
+  .dr-lbl { font-size: 10px; }
+  
+  /* Timeline */
+  .tl-item { padding-bottom: 24px; }
+}
 
-      /* Horizontal Scrollable Stats (Swipe left/right) */
-      .stats-grid {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        scroll-snap-type: x mandatory;
-        padding-bottom: 12px;
-        gap: 12px;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-
-      .stats-grid::-webkit-scrollbar {
-        display: none;
-      }
-
-      .stat-card {
-        min-width: 150px !important;
-        scroll-snap-align: start;
-        flex-shrink: 0 !important;
-      }
-
-      /* Fix the microscopic Order Flow Pipeline */
-      .flow-wrap {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 16px !important;
-      }
-
-      .flow {
-        min-width: 800px !important;
-      }
-
-      /* Floating Action Button (FAB) for "+ New Order" */
-      .filter-bar .btn-primary,
-      .wb-btn .btn-outline {
-        position: fixed !important;
-        bottom: 24px !important;
-        right: 24px !important;
-        width: 60px !important;
-        height: 60px !important;
-        border-radius: 50% !important;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 0px !important;
-        background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
-        z-index: 9999 !important;
-      }
-
-      .filter-bar .btn-primary::after,
-      .wb-btn .btn-outline::after {
-        content: '+';
-        font-size: 32px;
-        font-weight: 300;
-        margin-bottom: 2px;
-      }
-
-      .content {
-        padding: 16px;
-      }
-
-      .welcome-banner {
-        flex-direction: column;
-        gap: 14px;
-        align-items: flex-start;
-        padding: 20px;
-      }
-
-      .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .filter-bar input {
-        min-width: unset;
-      }
-
-      .order-hero {
-        flex-direction: column;
-      }
-    }
-
-    @media (max-width: 640px) {
-
-      /* TRUE MOBILE LOGIN SCREEN */
-      #authScreen {
-        padding: 0 !important;
-        background: #fff !important;
-        align-items: flex-start;
-      }
-
-      .auth-bg-circles {
-        display: none;
-      }
-
-      .auth-card {
-        width: 100%;
-        max-width: 100%;
-        min-height: 100vh;
-        max-height: none;
-        border-radius: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 32px 20px 80px !important;
-        background: transparent !important;
-      }
-
-      .auth-logo {
-        margin-bottom: 24px;
-      }
-
-      .auth-logo-icon {
-        width: 64px;
-        height: 64px;
-        font-size: 24px;
-        margin-bottom: 12px;
-      }
-
-      .auth-logo-name {
-        font-size: 22px;
-      }
-
-      .auth-tab {
-        font-size: 11px;
-        padding: 8px 2px;
-      }
-
-      .field-wrap label {
-        font-size: 11px;
-      }
-
-      .field-wrap input {
-        font-size: 16px !important;
-        /* Prevents iOS zoom */
-        padding: 14px 16px;
-      }
-
-      .btn-signin {
-        padding: 15px;
-        font-size: 16px;
-        margin-top: 8px;
-      }
-    }
+@media (max-width: 640px) {
+  /* Login Screen fix (keep this as you had it) */
+  #authScreen { padding: 0 !important; background: #fff !important; align-items: flex-start; }
+  .auth-bg-circles { display: none; }
+  .auth-card { width: 100%; max-width: 100%; min-height: 100vh; max-height: none; border-radius: 0 !important; border: none !important; box-shadow: none !important; padding: 32px 20px 80px !important; background: transparent !important; }
+  .auth-logo { margin-bottom: 24px; }
+  .auth-logo-icon { width: 64px; height: 64px; font-size: 24px; margin-bottom: 12px; }
+  .auth-logo-name { font-size: 22px; }
+  .auth-tab { font-size: 11px; padding: 8px 2px; }
+  .field-wrap label { font-size: 11px; }
+  .field-wrap input { font-size: 16px !important; padding: 14px 16px; }
+  .btn-signin { padding: 15px; font-size: 16px; margin-top: 8px; }
+}
   </style>
 </head>
 
@@ -2656,8 +2632,7 @@
         <!-- ====== NOTIFICATIONS LOG ====== -->
         <div class="page" id="pg-notif-log">
           <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px" id="notifStats"></div>
-          <div class="alert alert-info mb-16">📱 <strong>SMS via MSG91</strong> — Add your MSG91 Auth Key and Template
-            ID in config.php after uploading to Hostinger to enable real SMS alerts.</div>
+          
           <div class="card">
             <div class="card-top">
               <h3>Notification Log</h3>
