@@ -14,16 +14,26 @@ router.get('/', async (req, res) => {
     const failed = await Notification.countDocuments({ company_id: cid, status: 'failed' });
     const emails = await Notification.countDocuments({ company_id: cid, type: 'email' });
     const sms    = await Notification.countDocuments({ company_id: cid, type: 'sms' });
-    res.json({ stats: { total, sent, failed, emails, sms }, logs: logs.map(n => ({ ...n, id: n._id, order_number: n.order_id?.order_number })) });
+    res.json({
+      stats: { total, sent, failed, emails, sms },
+      logs:  logs.map(n => ({ ...n, id: n._id, order_number: n.order_id?.order_number }))
+    });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/test-email', async (req, res) => {
   try {
     const { sendEmail } = require('../services/notify');
-    const ok = await sendEmail(req.user.email, 'WGS Order Processing — Email Test',
-      '<p>This is a test email. Email notifications are working! ✅</p>', req.company_id);
-    res.json({ success: ok, message: ok ? `Test email sent to ${req.user.email}` : 'Failed — check SMTP config in .env' });
+    const ok = await sendEmail(
+      req.user.email,
+      'WGS Order Processing — Email Test',
+      '<p>This is a test email. Email notifications are working! ✅</p>',
+      req.company_id
+    );
+    res.json({
+      success: ok,
+      message: ok ? `Test email sent to ${req.user.email}` : 'Failed — check SMTP config in .env'
+    });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

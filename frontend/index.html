@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>WGS Order Processing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderFlow — Order Management System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -19,11 +19,6 @@
   --bg-panel2:  #e8f2fd;
   --bg-hover:   #f0f7ff;
   --bg-input:   #f7faff;
-
-  /* WGS Brand Colors */
-  --wgs-purple: #5b2d8e;
-  --wgs-navy:   #1c3d6e;
-  --wgs-blue:   #4878b8;
 
   /* Blues — Brand */
   --blue-50:    #eff8ff;
@@ -86,7 +81,7 @@
   --r2:         14px;
   --r3:         18px;
   --sidebar-w:  248px;
-  --topbar-h:   60px;
+  --topbar-h:   76px;
   --t:          0.2s ease;
 }
 
@@ -110,16 +105,15 @@ a:hover { color: var(--blue-700); }
    AUTH SCREEN
    ============================================================= */
 #authScreen {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #ede8f7 0%, #eef4fb 40%, #f0f4ff 70%, #e8eef8 100%);
-  padding: clamp(12px, 3vw, 24px);
+  background: linear-gradient(145deg, #dbeeff 0%, #eef8ff 40%, #f0f9ff 70%, #e4f2ff 100%);
+  padding: 20px;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  overflow-y: auto;
 }
 
 .auth-bg-circles {
@@ -132,7 +126,7 @@ a:hover { color: var(--blue-700); }
 .auth-circle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(91,45,142,0.10), transparent 70%);
+  background: radial-gradient(circle, rgba(14,165,233,0.12), transparent 70%);
 }
 .auth-circle-1 { width: 600px; height: 600px; top: -200px; right: -100px; }
 .auth-circle-2 { width: 400px; height: 400px; bottom: -100px; left: -80px; }
@@ -144,11 +138,9 @@ a:hover { color: var(--blue-700); }
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r3);
-  padding: clamp(20px, 4vw, 40px) clamp(18px, 4vw, 38px);
+  padding: 44px 40px;
   width: 100%;
-  max-width: min(440px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
-  overflow-y: auto;
+  max-width: 440px;
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(14,165,233,0.08);
   animation: authIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
 }
@@ -160,27 +152,26 @@ a:hover { color: var(--blue-700); }
 
 .auth-logo {
   text-align: center;
-  margin-bottom: clamp(16px, 3vh, 30px);
+  margin-bottom: 36px;
 }
 
 .auth-logo-icon {
-  width: 80px; height: 80px;
-  background: transparent;
+  width: 68px; height: 68px;
+  background: linear-gradient(135deg, var(--sky-d), var(--blue-700));
   border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
   font-size: 30px;
   margin: 0 auto 14px;
-  box-shadow: 0 8px 24px rgba(91,45,142,0.2), 0 0 0 6px rgba(91,45,142,0.08);
+  box-shadow: 0 8px 24px rgba(2,132,199,0.3), 0 0 0 6px rgba(2,132,199,0.08);
 }
 
 .auth-logo-name {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(18px, 4vw, 22px);
+  font-size: 26px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.5px;
   margin-bottom: 4px;
-  line-height: 1.2;
 }
 
 .auth-logo-tag { font-size: 13px; color: var(--text3); }
@@ -194,8 +185,18 @@ a:hover { color: var(--blue-700); }
 .auth-divider span { font-size: 12px; color: var(--text4); white-space: nowrap; }
 .auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
 
-.demo-chip-hidden {
-  display: none;
+.demo-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.demo-chip {
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 30px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text3);
@@ -203,7 +204,8 @@ a:hover { color: var(--blue-700); }
   transition: var(--t);
   user-select: none;
 }
-
+.demo-chip:hover { background: var(--sky-pale); border-color: var(--sky); color: var(--sky-d); box-shadow: 0 2px 8px rgba(14,165,233,0.15); }
+.demo-chip span  { color: var(--sky-d); }
 
 .field-wrap { margin-bottom: 16px; }
 .field-wrap label {
@@ -307,14 +309,12 @@ a:hover { color: var(--blue-700); }
 }
 
 .sb-brand-icon {
-  width: 40px; height: 40px;
-  background: rgba(255,255,255,0.15);
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.2);
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   border: 1px solid rgba(255,255,255,0.25);
-  overflow: hidden;
-  flex-shrink: 0;
 }
 
 .sb-brand-name {
@@ -443,12 +443,13 @@ a:hover { color: var(--blue-700); }
   border-bottom: 1px solid var(--border3);
   display: flex;
   align-items: center;
-  padding: 0 28px;
-  gap: 14px;
+  padding: 0 32px;
+  gap: 16px;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
 }
 
 .menu-btn {
@@ -468,22 +469,22 @@ a:hover { color: var(--blue-700); }
 
 .topbar-title {
   font-family: 'Outfit', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: var(--text);
   flex: 1;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
 }
 
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
 .topbar-role-chip {
-  padding: 5px 12px;
+  padding: 7px 16px;
   background: var(--sky-pale);
   border: 1px solid var(--sky-xl);
   border-radius: 30px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--sky-d);
 }
 
@@ -491,6 +492,7 @@ a:hover { color: var(--blue-700); }
 .content {
   padding: 28px;
   flex: 1;
+  overflow-y: auto;
 }
 
 /* Pages */
@@ -1155,48 +1157,6 @@ a:hover { color: var(--blue-700); }
   .filter-bar input { min-width: unset; }
   .order-hero { flex-direction: column; }
 }
-
-
-/* ── Restored: Company Slug + Register ── */
-.demo-row { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:22px; }
-
-/* =============================================================
-   WGS RESPONSIVE OVERRIDES — fits any screen
-   ============================================================= */
-html, body { height: 100%; overflow: hidden; }
-
-@media (max-width: 768px) {
-  :root { --sidebar-w: 260px; --topbar-h: 52px; }
-  html { font-size: 14px; }
-  .auth-card { padding: 18px 16px !important; }
-  .auth-logo-icon { width: 64px !important; height: 64px !important; }
-}
-
-@media (max-width: 480px) {
-  html { font-size: 13px; }
-  .auth-card { padding: 14px 12px !important; border-radius: 12px !important; }
-  .auth-logo-icon { width: 56px !important; height: 56px !important; }
-  .auth-logo-name { font-size: 16px !important; }
-}
-
-@media (min-width: 1440px) {
-  html { font-size: 16px; }
-}
-
-/* Ensure main content area fits viewport */
-#appScreen {
-  display: none;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
-#appScreen.show { display: flex; }
-
-.main-content {
-  flex: 1;
-  overflow-y: auto;
-  height: 100vh;
-}
 </style>
 </head>
 <body>
@@ -1214,9 +1174,9 @@ html, body { height: 100%; overflow: hidden; }
 
     <!-- Logo -->
     <div class="auth-logo">
-      <div class="auth-logo-icon"><img src="WGS.png" alt="WGS Logo" style="width:100%;height:100%;object-fit:contain;border-radius:12px"></div>
-      <div class="auth-logo-name">WGS Order Processing</div>
-      <div class="auth-logo-tag">Professional Order Management</div>
+      <div class="auth-logo-icon">⚡</div>
+      <div class="auth-logo-name">OrderFlow</div>
+      <div class="auth-logo-tag">Order Management System</div>
     </div>
 
     <!-- Error / Info alert -->
@@ -1228,28 +1188,31 @@ html, body { height: 100%; overflow: hidden; }
       <button class="auth-tab" id="tabOtp" onclick="switchTab('otp')">📧 Email OTP</button>
       <button class="auth-tab" id="tabGoogle" onclick="switchTab('google')">🔵 Google</button>
       <button class="auth-tab" id="tabReg" onclick="switchTab('reg')" style="border-left:1px solid var(--border2)">🏢 Register</button>
-
     </div>
-
-
 
     <!-- ── COMPANY SLUG FIELD ────────────────────────────── -->
     <div id="slugField" class="field-wrap" style="margin-bottom:18px">
-      <label style="display:flex;align-items:center;gap:6px">🏢 Company Workspace Slug <span style="font-size:11px;color:var(--text4);font-weight:400">(your unique company ID)</span></label>
+      <label style="display:flex;align-items:center;gap:6px">🏢 Company Workspace <span style="font-size:11px;color:var(--text4);font-weight:400">(your unique company ID)</span></label>
       <input type="text" id="companySlug" placeholder="e.g. mycompany" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')" style="font-family:monospace;letter-spacing:0.5px">
-      <div id="slugHint" style="font-size:11.5px;color:var(--text4);margin-top:4px">Enter the slug shown after registration. <a href="#" onclick="switchTab('reg');return false;" style="color:var(--sky)">Register new company →</a></div>
+      <div id="slugHint" style="font-size:11.5px;color:var(--text4);margin-top:4px">Enter the slug given during company registration. <a href="#" onclick="switchToRegister();return false;" style="color:var(--sky)">Register new company →</a></div>
     </div>
 
     <!-- ── PANEL 1: Password Login ─────────────────────────── -->
     <div id="panelPwd">
-
+      <p style="font-size:11.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Demo Accounts</p>
+      <div class="demo-row" style="margin-bottom:18px">
+        <div class="demo-chip" onclick="ql('admin')">👔 <span>Team A</span></div>
+        <div class="demo-chip" onclick="ql('partner')">⚙️ <span>Partner</span></div>
+        <div class="demo-chip" onclick="ql('billing')">💳 <span>Billing</span></div>
+        <div class="demo-chip" onclick="ql('quality')">🔍 <span>QC</span></div>
+      </div>
       <div class="field-wrap">
         <label>Email Address</label>
-        <input type="email" id="loginEmail" placeholder="you@company.com" value="">
+        <input type="email" id="loginEmail" placeholder="you@company.com" value="admin@company.com">
       </div>
       <div class="field-wrap">
         <label>Password</label>
-        <input type="password" id="loginPass" placeholder="••••••••" value=""
+        <input type="password" id="loginPass" placeholder="••••••••" value="password"
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="btn-signin" id="btnPwd" onclick="doLogin()">Sign In →</button>
@@ -1327,9 +1290,6 @@ html, body { height: 100%; overflow: hidden; }
     </div>
 
     <!-- ── PANEL 4: Company Registration ────────────────────── -->
-
-
-    <!-- ── PANEL 4: Company Registration ──────────────────── -->
     <div id="panelReg" style="display:none">
       <p style="font-size:13px;color:var(--text3);margin-bottom:18px;line-height:1.5">
         Create a new company workspace. You'll be the <strong>admin</strong> of your team.
@@ -1344,12 +1304,11 @@ html, body { height: 100%; overflow: hidden; }
       </div>
       <div class="field-wrap">
         <label>Email Address</label>
-        <input type="email" id="regEmail" placeholder="you@yourcompany.com">
+        <input type="email" id="regEmail" placeholder="you@company.com">
       </div>
       <div class="field-wrap">
         <label>Password <span style="font-size:11px;font-weight:400;color:var(--text4)">(min 6 chars)</span></label>
-        <input type="password" id="regPass" placeholder="Create a strong password"
-          onkeydown="if(event.key==='Enter')doRegister()">
+        <input type="password" id="regPass" placeholder="Create a strong password">
       </div>
       <div class="field-wrap">
         <label>Phone <span style="font-size:11px;font-weight:400;color:var(--text4)">(optional)</span></label>
@@ -1362,7 +1321,7 @@ html, body { height: 100%; overflow: hidden; }
       </p>
     </div>
 
-    </div><!-- /auth-card -->
+  </div><!-- /auth-card -->
 </div>
 
 <!-- =========================================================
@@ -1375,14 +1334,14 @@ html, body { height: 100%; overflow: hidden; }
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand-area">
       <div class="sb-brand">
-        <div class="sb-brand-icon"><img src="WGS.png" alt="WGS" style="width:100%;height:100%;object-fit:contain;border-radius:8px;padding:3px"></div>
-        <span class="sb-brand-name">WGS</span>
+        <div class="sb-brand-icon">⚡</div>
+        <span class="sb-brand-name">OrderFlow</span>
       </div>
       <div class="sb-user-chip">
         <div class="sb-avatar" id="sbAv">A</div>
         <div>
           <div class="sb-user-name" id="sbNm">Arjun Sharma</div>
-          <div id="sbCo" style="font-size:11px;color:var(--text4);margin-top:1px">WGS Order Processing</div>
+          <div id="sbCo" style="font-size:11px;color:var(--text4);margin-top:1px"></div>
           <div class="sb-user-role" id="sbRl">Team A Manager</div>
         </div>
       </div>
@@ -1844,6 +1803,47 @@ html, body { height: 100%; overflow: hidden; }
   </div>
 </div>
 
+<!-- Edit User Modal -->
+<div class="overlay" id="editUserM" onclick="if(event.target===this)closeM('editUserM')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd">
+      <h3 id="editUserTitle">Edit Team Member</h3>
+      <button class="modal-close" onclick="closeM('editUserM')">✕</button>
+    </div>
+    <div class="modal-bd">
+      <input type="hidden" id="eu_id">
+      <div class="f-row">
+        <div class="field"><label>Full Name *</label><input id="eu_n" placeholder="Full name"></div>
+        <div class="field"><label>Email *</label><input type="email" id="eu_e" placeholder="email@company.com"></div>
+      </div>
+      <div class="f-row">
+        <div class="field"><label>Phone</label><input type="tel" id="eu_ph" placeholder="+91"></div>
+        <div class="field">
+          <label>Role</label>
+          <select id="eu_r">
+            <option value="admin">Team A — Manager</option>
+            <option value="partner">Production Partner</option>
+            <option value="quality">Quality Control</option>
+            <option value="billing">Billing & Dispatch</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>New Password <span style="text-transform:none;font-weight:500;color:var(--text4)">(leave blank to keep current)</span></label>
+        <input type="password" id="eu_p" placeholder="Enter new password to change it">
+      </div>
+      <div id="euAlert" style="display:none;margin-top:8px"></div>
+    </div>
+    <div class="modal-ft" style="justify-content:space-between">
+      <button class="btn btn-danger btn-sm" id="euDeleteBtn" onclick="deleteUser()">🗑️ Delete</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline btn-sm" onclick="closeM('editUserM')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveEditUser()">Save Changes →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -1966,7 +1966,7 @@ function closeM(id) { document.getElementById(id).classList.remove('show'); }
 
 // Company slug - loaded after login/register
 let COMPANY_SLUG = localStorage.getItem('of_slug') || '';
-function setSlug(s) { COMPANY_SLUG = s; if(s) localStorage.setItem('of_slug', s); else localStorage.removeItem('of_slug'); }
+function setSlug(s) { COMPANY_SLUG = s; localStorage.setItem('of_slug', s); }
 
 // Store JWT token
 function setToken(t) { localStorage.setItem('of_token', t); }
@@ -1997,21 +1997,28 @@ function switchTab(tab) {
     if (tabEl)   tabEl.classList.toggle('active', t===tab);
     if (panelEl) panelEl.style.display = t===tab ? 'block' : 'none';
   });
-  // Hide slug field on Register tab (not needed there)
   const sf = document.getElementById('slugField');
-  if (sf) sf.style.display = tab === 'reg' ? 'none' : '';
+  if (sf) sf.style.display = tab==='reg' ? 'none' : '';
   document.getElementById('authAlert').style.display = 'none';
+}
+
+// ── DEMO QUICK LOGIN ──────────────────────────────────────
+const QUICK = { admin:'admin@company.com', partner:'partner@company.com', quality:'qc@company.com', billing:'billing@company.com' };
+function ql(role) {
+  document.getElementById('loginEmail').value = QUICK[role];
+  document.getElementById('loginPass').value = 'password';
 }
 
 // ── 1. PASSWORD LOGIN ─────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const pass  = document.getElementById('loginPass').value;
-  const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-  if (!slug) { authAlert('Enter your company workspace slug first.'); return; }
+  const slug  = document.getElementById('companySlug').value.trim();
+  if (!slug && API_BASE !== 'https://wgs-order-processing.onrender.com/api') { authAlert('Enter your company workspace slug'); return; }
   if (!email || !pass) { authAlert('Please enter email and password.'); return; }
 
   if (API_BASE) {
+    // Real backend call
     setBtnLoading('btnPwd', true, 'Sign In →');
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -2025,6 +2032,11 @@ async function doLogin() {
       loginSuccess(data.user, data.company?.slug, data.company?.name);
     } catch(e) { authAlert('Cannot reach server. Check your connection.'); }
     finally { setBtnLoading('btnPwd', false, 'Sign In →'); }
+  } else {
+    // Offline demo mode
+    const user = DB.users.find(u => u.email === email && u.active);
+    if (!user || user.pwd !== pass) { authAlert('Invalid email or password.'); return; }
+    loginSuccess(user);
   }
 }
 
@@ -2035,14 +2047,24 @@ async function sendOtp() {
   const email = document.getElementById('otpEmail').value.trim();
   if (!email) { authAlert('Please enter your email address.'); return; }
 
-  const slug2 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-  if (!slug2) { authAlert('Enter your company workspace slug first.'); return; }
+  if (!API_BASE) {
+    // Demo mode — simulate OTP
+    otpEmailUsed = email;
+    document.getElementById('otpSentMsg').textContent = `Demo: use code 123456 for ${email}`;
+    document.getElementById('otpStep1').style.display = 'none';
+    document.getElementById('otpStep2').style.display = 'block';
+    document.getElementById('otpCode').focus();
+    startOtpTimer(10);
+    toast('Demo OTP: 123456', 'info');
+    return;
+  }
+
   setBtnLoading('btnSendOtp', true, 'Send Login Code →');
   try {
     const res  = await fetch(`${API_BASE}/auth/otp/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-company-slug': slug2 },
-      body: JSON.stringify({ email, company_slug: slug2 })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
     });
     const data = await res.json();
     if (!res.ok) { authAlert(data.error || 'Failed to send OTP'); return; }
@@ -2062,18 +2084,27 @@ async function verifyOtp() {
   const code = document.getElementById('otpCode').value.trim();
   if (!code || code.length !== 6) { authAlert('Please enter the 6-digit code from your email.'); return; }
 
-  const slug3 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+  if (!API_BASE) {
+    // Demo mode
+    if (code === '123456') {
+      const user = DB.users.find(u => u.email === otpEmailUsed && u.active);
+      if (!user) { authAlert('Email not found in demo data.'); return; }
+      loginSuccess(user);
+    } else { authAlert('Incorrect code. Demo code is: 123456'); }
+    return;
+  }
+
   setBtnLoading('btnVerifyOtp', true, 'Verify Code & Sign In →');
   try {
     const res  = await fetch(`${API_BASE}/auth/otp/verify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-company-slug': slug3 },
-      body: JSON.stringify({ email: otpEmailUsed, otp: code, company_slug: slug3 })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: otpEmailUsed, otp: code })
     });
     const data = await res.json();
     if (!res.ok) { authAlert(data.error || 'Verification failed'); return; }
     setToken(data.token);
-    loginSuccess(data.user, data.company?.slug, data.company?.name);
+    loginSuccess(data.user);
   } catch(e) { authAlert('Cannot reach server.'); }
   finally { setBtnLoading('btnVerifyOtp', false, 'Verify Code & Sign In →'); }
 }
@@ -2107,9 +2138,12 @@ function startOtpTimer(minutes) {
 
 // ── 3. GOOGLE OAUTH ───────────────────────────────────────
 function startGoogleLogin() {
-  const slug4 = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
-  if (!slug4) { authAlert('Enter your company workspace slug before using Google login.'); return; }
-  window.location.href = `${API_BASE}/auth/google?slug=${encodeURIComponent(slug4)}`;
+  if (!API_BASE) {
+    authAlert('Google login requires the backend to be connected. Set API_BASE in the script.', 'info');
+    return;
+  }
+  // Method A: Server-side redirect
+  window.location.href = `${API_BASE}/auth/google`;
 }
 
 // Handle Google callback token from URL (after redirect)
@@ -2163,6 +2197,7 @@ function doLogout() {
 
 // ── Auto-login if token exists ─────────────────────────────
 async function tryAutoLogin() {
+  // Restore company slug
   const savedSlug = localStorage.getItem('of_slug');
   if (savedSlug) { COMPANY_SLUG = savedSlug; }
   const slugInput = document.getElementById('companySlug');
@@ -2184,6 +2219,10 @@ async function tryAutoLogin() {
       // Offline? Use cached user
       loginSuccess(JSON.parse(savedUser));
     }
+  } else {
+    // Demo mode — use cached
+    const user = DB.users.find(u => u.email === JSON.parse(savedUser).email && u.active);
+    if (user) loginSuccess(user);
   }
 }
 
@@ -2213,13 +2252,12 @@ function setupApp() {
   document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
   document.getElementById('sbNm').textContent = ME.name;
   document.getElementById('sbRl').textContent = roleLabel(ME.role);
-  
-  const coName = localStorage.getItem('of_company_name') || (ME.company_name || '');
+  const coName = localStorage.getItem('of_company_name');
   if (coName) {
     const coEl = document.getElementById('sbCo');
     if (coEl) coEl.textContent = coName;
   }
-    document.getElementById('topRole').textContent = roleLabel(ME.role);
+  document.getElementById('topRole').textContent = roleLabel(ME.role);
 
   // Greeting
   const hr = new Date().getHours();
@@ -2598,7 +2636,7 @@ function doAction() {
   }
   else if (key==='goods_recv') {
     addLog('goods_received','📦 Production complete. Goods returned to Team A and logged.');
-    logNotif('email',o.num,o.id,'team@wgs.com','Goods Ready for Quality Check');
+    logNotif('email',o.num,o.id,'admin@company.com','Goods Ready for Quality Check');
     toast('Goods received! Ready for QC.','success');
   }
   else if (key==='start_qc') {
@@ -2629,7 +2667,7 @@ function doAction() {
     addLog('dispatched','🚚 Order billed and dispatched.');
     logNotif('email',o.num,o.id,o.cEmail,'Your Order Has Been Dispatched!');
     logNotif('sms',o.num,o.id,o.cPhone,'Dispatch notification');
-    logNotif('email',o.num,o.id,'team@wgs.com','Order Dispatched — Client Notified');
+    logNotif('email',o.num,o.id,'admin@company.com','Order Dispatched — Client Notified');
     setTimeout(()=>{
       o.timeline.forEach(t=>t.latest=false);
       o.timeline.push({st:'completed',act:'✅ Order completed. Client notified via Email + SMS.',by:me,at:now,done:false,latest:true});
@@ -2834,7 +2872,7 @@ function saveEditClient() {
 // ================================================================
 function renderTeam() {
   document.getElementById('teamTbl').innerHTML=`
-    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Last Login</th><th>Status</th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Last Login</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${DB.users.map(u=>`
       <tr>
         <td>
@@ -2845,9 +2883,86 @@ function renderTeam() {
         <td style="font-size:13.5px">${H(u.phone||'—')}</td>
         <td><span class="badge ${roleColor(u.role)}">${roleLabel(u.role)}</span></td>
         <td><span class="muted" style="font-size:12.5px">${u.lastLogin||'Never'}</span></td>
-        <td><span class="${u.active?'badge b-green':'badge b-red'}">${u.active?'✅ Active':'Inactive'}</span></td>
+        <td><span class="${u.active?'badge b-green':'badge b-red'}">${u.active?'✅ Active':'⛔ Inactive'}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-outline btn-xs" onclick="openEditUser('${u.id}');event.stopPropagation()" title="Edit details, password, role">✏️ Edit</button>
+            <button class="btn btn-xs ${u.active?'btn-warn':'btn-success'}" onclick="toggleUserStatus('${u.id}');event.stopPropagation()" title="${u.active?'Deactivate user':'Activate user'}">${u.active?'⛔ Disable':'✅ Enable'}</button>
+          </div>
+        </td>
       </tr>
     `).join('')}</tbody>`;
+}
+
+function openEditUser(id) {
+  const u = DB.users.find(x => String(x.id) === String(id));
+  if (!u) return;
+  document.getElementById('eu_id').value  = u.id;
+  document.getElementById('eu_n').value   = u.name;
+  document.getElementById('eu_e').value   = u.email;
+  document.getElementById('eu_ph').value  = u.phone || '';
+  document.getElementById('eu_r').value   = u.role;
+  document.getElementById('eu_p').value   = '';
+  document.getElementById('euAlert').style.display = 'none';
+  document.getElementById('editUserTitle').textContent = `Edit — ${u.name}`;
+  // Hide delete button for self
+  document.getElementById('euDeleteBtn').style.display = (String(u.id) === String(ME.id)) ? 'none' : '';
+  openM('editUserM');
+}
+
+async function saveEditUser() {
+  const id  = document.getElementById('eu_id').value;
+  const n   = document.getElementById('eu_n').value.trim();
+  const e   = document.getElementById('eu_e').value.trim();
+  const ph  = document.getElementById('eu_ph').value.trim();
+  const r   = document.getElementById('eu_r').value;
+  const pwd = document.getElementById('eu_p').value;
+
+  if (!n || !e) { toast('Name and email are required.', 'error'); return; }
+
+  const body = { name: n, email: e, phone: ph, role: r };
+  if (pwd) {
+    if (pwd.length < 6) { toast('Password must be at least 6 characters.', 'error'); return; }
+    body.password = pwd;
+  }
+
+  try {
+    const updated = await api('PUT', \`/users/\${id}\`, body);
+    const idx = DB.users.findIndex(x => String(x.id) === String(id));
+    if (idx >= 0) DB.users[idx] = mapUser(updated);
+    closeM('editUserM');
+    renderTeam();
+    toast('Team member updated!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function toggleUserStatus(id) {
+  const u = DB.users.find(x => String(x.id) === String(id));
+  if (!u) return;
+  if (String(u.id) === String(ME.id)) { toast('You cannot disable your own account.', 'error'); return; }
+  const action = u.active ? 'disable' : 'enable';
+  if (!confirm(\`Are you sure you want to \${action} \${u.name}?\`)) return;
+  try {
+    await api('PATCH', \`/users/\${id}/toggle\`);
+    const idx = DB.users.findIndex(x => String(x.id) === String(id));
+    if (idx >= 0) DB.users[idx].active = !DB.users[idx].active;
+    renderTeam();
+    toast(\`\${u.name} has been \${u.active ? 'deactivated' : 'activated'}.\`, u.active ? 'error' : 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteUser() {
+  const id = document.getElementById('eu_id').value;
+  const u  = DB.users.find(x => String(x.id) === String(id));
+  if (!u) return;
+  if (!confirm(\`Permanently delete \${u.name}? This cannot be undone.\`)) return;
+  try {
+    await api('DELETE', \`/users/\${id}\`);
+    DB.users = DB.users.filter(x => String(x.id) !== String(id));
+    closeM('editUserM');
+    renderTeam();
+    toast(\`\${u.name} has been deleted.\`, 'error');
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 function saveUser() {
@@ -2910,11 +3025,6 @@ document.getElementById('wbDate').textContent = new Date().toLocaleDateString('e
 
 
 // ── COMPANY REGISTRATION ──────────────────────────────────
-
-
-
-
-// ── COMPANY REGISTRATION ──────────────────────────────────
 function switchToRegister() { switchTab('reg'); }
 
 async function doRegister() {
@@ -2928,6 +3038,11 @@ async function doRegister() {
   if (!admin_name)   { authAlert('Enter your name'); return; }
   if (!email)        { authAlert('Enter your email'); return; }
   if (!password || password.length < 6) { authAlert('Password must be at least 6 characters'); return; }
+
+  if (!API_BASE || API_BASE === 'YOUR_RAILWAY_URL_HERE/api') {
+    authAlert('Connect your backend first (set API_BASE in the script)', 'info');
+    return;
+  }
 
   setBtnLoading('btnReg', true, 'Creating...');
   try {
@@ -2947,13 +3062,15 @@ async function doRegister() {
     rd.style.color = '#166534';
     rd.innerHTML = `✅ <strong>Workspace created!</strong><br>
       Company: <strong>${data.company.name}</strong><br>
-      Your login slug: <code style="background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;font-size:14px">${data.company.slug}</code><br>
-      <span style="font-size:11px;color:#4b5563;margin-top:6px;display:block">📌 Save this slug — you and your team need it to log in every time.</span>`;
+      Your login slug: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700">${data.company.slug}</code><br>
+      <span style="font-size:11px;color:#4b5563;margin-top:4px;display:block">Save this slug — you need it every time you log in.</span>`;
 
     // Auto-login
     setToken(data.token);
+    setSlug(data.company.slug);
     localStorage.setItem('of_user', JSON.stringify(data.user));
-    setTimeout(() => loginSuccess(data.user, data.company.slug, data.company.name), 1800);
+    localStorage.setItem('of_company_name', data.company.name);
+    setTimeout(() => loginSuccess(data.user, data.company.slug, data.company.name), 1500);
   } catch(e) {
     authAlert('Cannot reach server: ' + e.message);
   } finally {

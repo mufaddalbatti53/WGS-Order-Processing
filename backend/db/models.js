@@ -27,7 +27,7 @@ const UserSchema = new Schema({
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 UserSchema.index({ company_id: 1, email: 1 }, { unique: true });
-UserSchema.index({ company_id: 1, google_id: 1 }, { unique: true, sparse: true });
+UserSchema.index({ company_id: 1, google_id: 1 }, { unique: true, partialFilterExpression: { google_id: { $type: 'string' } } });
 
 // ── OTP ───────────────────────────────────────────────────
 const OtpSchema = new Schema({
