@@ -1494,7 +1494,8 @@
       position: absolute;
       left: 8px;
       top: 26px;
-      width: 2px height: 18px;
+      width: 2px;
+      height: 18px;
       background: var(--border);
     }
 
@@ -1892,127 +1893,201 @@
       font-weight: 600;
     }
 
-   
-/* =============================================================
-   RESPONSIVE & NATIVE MOBILE APP POLISH
+    /* =============================================================
+   NATIVE MOBILE APP OVERRIDES
    ============================================================= */
-@media (max-width: 960px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.mob-open { transform: translateX(0); box-shadow: 8px 0 40px rgba(15,45,82,0.12); }
-  .main { margin-left: 0; }
-  .menu-btn { display: flex; }
-  .order-split { grid-template-columns: 1fr; }
-  .f-row { grid-template-columns: 1fr; }
-}
+    @media (max-width: 960px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
 
-@media (max-width: 768px) {
-  /* 1. Fix the Floating Button Bug */
-  /* The page fade-in animation traps fixed elements. We disable the transform on mobile so the button floats properly. */
-  .page.show { animation: none !important; transform: none !important; }
-  
-  .filter-bar .btn-primary, .wb-btn .btn-outline {
-    position: fixed !important;
-    bottom: 24px !important; 
-    right: 24px !important;
-    width: 60px !important; 
-    height: 60px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
-    display: flex !important; 
-    align-items: center !important; 
-    justify-content: center !important;
-    font-size: 0px !important; /* Hides the text */
-    background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
-    color: white !important;
-    border: none !important;
-    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
-    z-index: 9999 !important;
-  }
-  .filter-bar .btn-primary::after, .wb-btn .btn-outline::after {
-    content: '+';
-    font-size: 32px; font-weight: 300; margin-bottom: 2px;
-  }
+      .sidebar.mob-open {
+        transform: translateX(0);
+        box-shadow: 8px 0 40px rgba(15, 45, 82, 0.12);
+      }
 
-  /* 2. Fix the microscopic Order Flow Pipeline */
-  /* This prevents squishing and forces horizontal swiping */
-  .flow-wrap {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 16px !important;
-  }
-  .flow {
-    min-width: 800px !important; /* Forces natural width so it doesn't shrink */
-  }
+      .main {
+        margin-left: 0;
+      }
 
-  /* 3. Make Stats grid swipeable instead of wrapping */
-  .stats-grid {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 12px;
-    gap: 12px;
-  }
-  .stats-grid::-webkit-scrollbar { display: none; }
-  .stat-card {
-    min-width: 150px !important;
-    scroll-snap-align: start;
-    flex-shrink: 0 !important;
-  }
+      .menu-btn {
+        display: flex;
+      }
 
-  /* 4. Glassmorphism Header */
-  .topbar {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 0 16px;
-  }
-  
-  .content { padding: 16px; }
-  .order-hero { flex-direction: column; }
-}
-@media (max-width: 640px) {
-  /* =========================================================
-     TRUE MOBILE LOGIN SCREEN
-     Removes the "box" and makes it a sleek full-screen view
-     ========================================================= */
-  #authScreen {
-    padding: 0 !important;
-    background: #fff !important; /* Clean white background */
-    align-items: flex-start; /* Aligns to top for natural scrolling */
-  }
-  .auth-bg-circles { display: none; } /* Remove background circles to save space */
-  
-  .auth-card {
-    width: 100%;
-    max-width: 100%;
-    min-height: 100vh;
-    max-height: none;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 32px 20px 80px !important; /* Extra bottom padding so buttons aren't cut off */
-    background: transparent !important;
-  }
+      .order-split {
+        grid-template-columns: 1fr;
+      }
 
-  .auth-logo { margin-bottom: 24px; }
-  .auth-logo-icon { width: 64px; height: 64px; font-size: 24px; margin-bottom: 12px; }
-  .auth-logo-name { font-size: 22px; }
+      .f-row {
+        grid-template-columns: 1fr;
+      }
+    }
 
-  /* Fit tabs evenly */
-  .auth-tab { font-size: 11px; padding: 8px 2px; }
-  
-  /* Fix Mobile Form Sizing */
-  .field-wrap label { font-size: 11px; }
-  .field-wrap input { 
-    font-size: 16px !important; /* Critical: 16px prevents iPhones from auto-zooming! */
-    padding: 14px 16px; 
-  }
-  .btn-signin { padding: 15px; font-size: 16px; margin-top: 8px; }
+    @media (max-width: 768px) {
 
-  .demo-row { justify-content: center; }
-}
+      /* Disable animations that break position:fixed on mobile */
+      .page.show {
+        animation: none !important;
+        transform: none !important;
+      }
+
+      /* Glassmorphism Header */
+      .topbar {
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 0 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      /* Horizontal Scrollable Stats (Swipe left/right) */
+      .stats-grid {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 12px;
+        gap: 12px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .stats-grid::-webkit-scrollbar {
+        display: none;
+      }
+
+      .stat-card {
+        min-width: 150px !important;
+        scroll-snap-align: start;
+        flex-shrink: 0 !important;
+      }
+
+      /* Fix the microscopic Order Flow Pipeline */
+      .flow-wrap {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 16px !important;
+      }
+
+      .flow {
+        min-width: 800px !important;
+      }
+
+      /* Floating Action Button (FAB) for "+ New Order" */
+      .filter-bar .btn-primary,
+      .wb-btn .btn-outline {
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0px !important;
+        background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4) !important;
+        z-index: 9999 !important;
+      }
+
+      .filter-bar .btn-primary::after,
+      .wb-btn .btn-outline::after {
+        content: '+';
+        font-size: 32px;
+        font-weight: 300;
+        margin-bottom: 2px;
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .welcome-banner {
+        flex-direction: column;
+        gap: 14px;
+        align-items: flex-start;
+        padding: 20px;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .filter-bar input {
+        min-width: unset;
+      }
+
+      .order-hero {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 640px) {
+
+      /* TRUE MOBILE LOGIN SCREEN */
+      #authScreen {
+        padding: 0 !important;
+        background: #fff !important;
+        align-items: flex-start;
+      }
+
+      .auth-bg-circles {
+        display: none;
+      }
+
+      .auth-card {
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+        max-height: none;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 32px 20px 80px !important;
+        background: transparent !important;
+      }
+
+      .auth-logo {
+        margin-bottom: 24px;
+      }
+
+      .auth-logo-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+
+      .auth-logo-name {
+        font-size: 22px;
+      }
+
+      .auth-tab {
+        font-size: 11px;
+        padding: 8px 2px;
+      }
+
+      .field-wrap label {
+        font-size: 11px;
+      }
+
+      .field-wrap input {
+        font-size: 16px !important;
+        /* Prevents iOS zoom */
+        padding: 14px 16px;
+      }
+
+      .btn-signin {
+        padding: 15px;
+        font-size: 16px;
+        margin-top: 8px;
+      }
+    }
   </style>
 </head>
 
@@ -2770,7 +2845,7 @@
     </div>
   </div>
 
-  <!-- Edit User Modal (Restored) -->
+  <!-- Edit User Modal -->
   <div class="overlay" id="editUserM" onclick="if(event.target===this)closeM('editUserM')">
     <div class="modal" style="max-width:560px">
       <div class="modal-hd">
@@ -2815,9 +2890,6 @@
   <!-- Toast Container -->
   <div class="toast-wrap" id="toastWrap"></div>
 
-  <!-- =========================================================
-     JAVASCRIPT — Full App Logic
-     ========================================================= -->
   <script>
     'use strict';
 
@@ -2835,7 +2907,7 @@
     let PEND_ACTION = null;
 
     // ================================================================
-    // DATA MAPPERS (Translates MongoDB data to Frontend UI)
+    // DATA MAPPERS
     // ================================================================
     const mapOrder = o => ({
       id: o._id || o.id, num: o.order_number, clientId: o.client_id, cName: o.client_name,
@@ -3098,7 +3170,7 @@
     function renderDashRecent() {
       const orders = [...DB.orders].sort((a, b) => new Date(b.updated) - new Date(a.updated)).slice(0, 6);
       document.getElementById('dashTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Updated</th></tr></thead><tbody>${orders.map(o => `
-        <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><span class="strong">${H(o.cName)}</span></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
+      <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><span class="strong">${H(o.cName)}</span></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
     }
 
     // ================================================================
@@ -3114,7 +3186,7 @@
       });
       document.getElementById('ordCnt').textContent = `— ${list.length} orders`;
       document.getElementById('ordersTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Partner</th><th>Updated</th></tr></thead><tbody>${list.map(o => `
-        <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><div class="strong">${H(o.cName)}</div></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${o.pName || '—'}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
+      <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><div class="strong">${H(o.cName)}</div></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${o.pName || '—'}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
     }
 
     // ================================================================
@@ -3222,7 +3294,7 @@
     function renderClients() {
       document.getElementById('clCnt').textContent = `— ${DB.clients.length} clients`;
       document.getElementById('clientsTbl').innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Credit</th>${ME.role === 'admin' ? '<th>Actions</th>' : ''}</tr></thead><tbody>${DB.clients.map(c => `
-        <tr><td><span class="strong">${H(c.name)}</span></td><td><span class="muted">${H(c.email || '—')}</span></td><td>${creditChip(c.credit)}</td>${ME.role === 'admin' ? `<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}')">Edit</button></td>` : ''}</tr>`).join('')}</tbody>`;
+      <tr><td><span class="strong">${H(c.name)}</span></td><td><span class="muted">${H(c.email || '—')}</span></td><td>${creditChip(c.credit)}</td>${ME.role === 'admin' ? `<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}')">Edit</button></td>` : ''}</tr>`).join('')}</tbody>`;
     }
 
     async function saveClient() {
@@ -3254,8 +3326,8 @@
     // ================================================================
     function renderTeam() {
       document.getElementById('teamTbl').innerHTML = `<thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>${DB.users.map(u => `
-        <tr><td><span class="strong">${H(u.name)}</span></td><td><span class="badge ${roleColor(u.role)}">${roleLabel(u.role)}</span></td><td><span class="${u.active ? 'badge b-green' : 'badge b-red'}">${u.active ? '✅ Active' : '⛔ Inactive'}</span></td>
-        <td><button class="btn btn-outline btn-xs" onclick="openEditUser('${u.id}')">✏️ Edit</button></td></tr>`).join('')}</tbody>`;
+      <tr><td><span class="strong">${H(u.name)}</span></td><td><span class="badge ${roleColor(u.role)}">${roleLabel(u.role)}</span></td><td><span class="${u.active ? 'badge b-green' : 'badge b-red'}">${u.active ? '✅ Active' : '⛔ Inactive'}</span></td>
+      <td><button class="btn btn-outline btn-xs" onclick="openEditUser('${u.id}')">✏️ Edit</button></td></tr>`).join('')}</tbody>`;
     }
 
     async function saveUser() {
