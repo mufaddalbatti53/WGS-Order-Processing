@@ -1888,6 +1888,92 @@ const STORE_KEY = 'orderflow_v1_cache';
 let DB = { orders:[], clients:[], users:[], notifLog:[] };
 const save = () => {}; // No-op — data lives on the server now
 
+// ── Field mapping: API → frontend format ───────────────────
+function mapOrder(o) {
+  const tl = (o.timeline || []).map((t, i, arr) => ({
+    st:     t.status,
+    act:    t.action,
+    by:     t.actor_name || '',
+    at:     t.created_at ? new Date(t.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})+', '+new Date(t.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '',
+    note:   t.notes || null,
+    fail:   t.is_fail || false,
+    done:   i < arr.length - 1,
+    latest: i === arr.length - 1,
+  }));
+  return {
+    id:        String(o._id || o.id),
+    num:       o.order_number,
+    clientId:  o.client_id ? String(o.client_id) : null,
+    cName:     o.client_name || '',
+    cPhone:    o.client_phone || '',
+    cEmail:    o.client_email || '',
+    src:       o.source || 'direct',
+    desc:      o.description || '',
+    status:    o.status,
+    prio:      o.priority || 'normal',
+    partnerId: o.partner_id ? String(o.partner_id._id || o.partner_id) : null,
+    pName:     o.partner_name || null,
+    amt:       o.amount || 0,
+    by:        o.created_by,
+    created:   o.created_at ? new Date(o.created_at).toISOString().slice(0,16).replace('T',' ') : '',
+    updated:   o.updated_at ? new Date(o.updated_at).toISOString() : new Date().toISOString(),
+    rejReason: o.rej_reason || '',
+    qNotes:    o.quality_notes || '',
+    bNotes:    o.billing_notes || '',
+    dispInfo:  o.dispatch_info || '',
+    timeline:  tl,
+  };
+}
+function mapClient(c) {
+  return {
+    id:      String(c._id || c.id),
+    name:    c.name,
+    company: c.company || '',
+    phone:   c.phone || '',
+    email:   c.email || '',
+    credit:  c.credit_status || 'good',
+    pending: c.pending_amount || 0,
+    notes:   c.notes || '',
+  };
+}
+function mapUser(u) {
+  return {
+    id:        String(u._id || u.id),
+    name:      u.name,
+    email:     u.email,
+    phone:     u.phone || '',
+    role:      u.role,
+    active:    u.is_active !== undefined ? u.is_active : true,
+    lastLogin: u.last_login_at ? new Date(u.last_login_at).toLocaleString('en-IN') : 'Never',
+  };
+}
+
+async function loadAppData() {
+  try {
+    const isAdmin = ME && ME.role === 'admin';
+    const [orders, clients, users, notifData] = await Promise.all([
+      api('GET', '/orders'),
+      api('GET', '/clients'),
+      isAdmin ? api('GET', '/users') : Promise.resolve([]),
+      isAdmin ? api('GET', '/notifications') : Promise.resolve({ logs: [] }),
+    ]);
+    DB.orders   = orders.map(mapOrder);
+    DB.clients  = clients.map(mapClient);
+    DB.users    = users.map(mapUser);
+    DB.notifLog = (notifData.logs || []).map(n => ({
+      type:   n.type,
+      ord:    n.order_number || '',
+      ordId:  String(n.order_id || n._id || ''),
+      to:     n.recipient || '',
+      subj:   n.subject || '',
+      status: n.status || 'sent',
+      at:     n.created_at ? new Date(n.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})+', '+new Date(n.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '',
+    }));
+  } catch(e) {
+    console.error('Failed to load app data:', e);
+  }
+}
+
 // Current session
 let ME = null;
 let CUR_ORDER = null;
@@ -2141,14 +2227,15 @@ function checkGoogleCallback() {
 }
 
 // ── SHARED: Login success handler ─────────────────────────
-function loginSuccess(user, companySlug, companyName) {
+async function loginSuccess(user, companySlug, companyName) {
   if (companySlug) setSlug(companySlug);
   if (companyName) localStorage.setItem('of_company_name', companyName);
   ME = user;
   localStorage.setItem('of_user', JSON.stringify(user));
+  document.getElementById('authAlert').style.display = 'none';
+  await loadAppData();
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('appScreen').classList.add('show');
-  document.getElementById('authAlert').style.display = 'none';
   setupApp();
 }
 
@@ -2507,7 +2594,7 @@ function buildActions(o) {
     if (o.status==='credit_rejected') btns.push({ key:'approve_credit', lbl:'♻️ Re-approve Credit', cls:'btn-warn' });
   }
 
-  if (r==='partner' && o.partnerId===ME.id) {
+  if (r==='partner' && String(o.partnerId)===String(ME.id||ME._id)) {
     if (o.status==='assigned')     btns.push({ key:'start_prod',  lbl:'⚙️ Start Production',    cls:'btn-primary' });
     if (['in_production','quality_failed'].includes(o.status)) btns.push({ key:'goods_recv', lbl:'✅ Production Complete', cls:'btn-success' });
   }
@@ -2566,110 +2653,66 @@ function triggerAct(key) {
   openM('actionM');
 }
 
-function doAction() {
+async function doAction() {
   const key   = PEND_ACTION;
   const notes = document.getElementById('actNotes').value.trim();
   const o     = CUR_ORDER;
-  const me    = ME.name;
-  const now   = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) + ', ' + new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 
-  const addLog = (st, act, note=null, fail=false) => {
-    o.timeline.forEach(t=>{ t.latest=false; });
-    o.timeline.push({ st, act, by:me, at:now, done:false, latest:true, ...(note?{note}:{}), ...(fail?{fail:true}:{}) });
-    o.status=st;
-    o.updated=new Date().toISOString().slice(0,16).replace('T',' ');
-  };
+  const keyMap = { start_prod:'start_production', goods_recv:'goods_received' };
+  const apiKey = keyMap[key] || key;
 
-  if (key==='approve_credit') {
-    addLog('credit_check','✅ Credit check approved. Ready to assign to a production partner.');
-    toast('Credit approved! Assign to a partner now.','success');
-  }
-  else if (key==='reject_credit') {
-    const reason = (document.getElementById('rejReason')?.value||notes||'Pending payment issues.');
-    o.rejReason = reason;
-    addLog('credit_rejected','❌ Credit rejected. Order placed on hold. Client notified.',reason,true);
-    logNotif('email',o.num,o.id,o.cEmail,'Order On Hold — Payment Pending');
-    logNotif('sms',o.num,o.id,o.cPhone,'Order on hold notice');
-    toast('Order on hold. Client notified.','error');
-  }
-  else if (key==='start_prod') {
-    addLog('in_production','⚙️ Production started.');
-    toast('Production started!','success');
-  }
-  else if (key==='goods_recv') {
-    addLog('goods_received','📦 Production complete. Goods returned to Team A and logged.');
-    logNotif('email',o.num,o.id,'team@wgs.com','Goods Ready for Quality Check');
-    toast('Goods received! Ready for QC.','success');
-  }
-  else if (key==='start_qc') {
-    addLog('quality_check','🔍 Quality check in progress.');
-    toast('QC started!','success');
-  }
-  else if (key==='qc_pass') {
-    o.qNotes = notes||'Passed quality inspection.';
-    addLog('billing','✅ Quality check passed. Sent to billing.',notes||'Passed quality inspection.');
-    logNotif('email',o.num,o.id,'billing@company.com','Order Ready for Billing');
-    toast('QC passed! Sent to billing team.','success');
-  }
-  else if (key==='qc_fail') {
-    const reason = document.getElementById('qcReason')?.value||notes||'Quality not met.';
-    o.qNotes=reason;
-    addLog('quality_failed','❌ Quality check FAILED. Returned to partner for rework.',reason,true);
-    if (o.partnerId) {
-      const p = DB.users.find(u=>u.id===o.partnerId);
-      if (p) logNotif('email',o.num,o.id,p.email,'Quality Check Failed — Rework Required');
-    }
-    toast('QC failed. Partner notified for rework.','error');
-  }
-  else if (key==='dispatch') {
-    const da  = document.getElementById('dispAmt')?.value;
-    const di  = document.getElementById('dispInfo')?.value||notes||'Order dispatched.';
-    if (da) o.amt=parseFloat(da);
-    o.dispInfo=di; o.bNotes=notes;
-    addLog('dispatched','🚚 Order billed and dispatched.');
-    logNotif('email',o.num,o.id,o.cEmail,'Your Order Has Been Dispatched!');
-    logNotif('sms',o.num,o.id,o.cPhone,'Dispatch notification');
-    logNotif('email',o.num,o.id,'team@wgs.com','Order Dispatched — Client Notified');
-    setTimeout(()=>{
-      o.timeline.forEach(t=>t.latest=false);
-      o.timeline.push({st:'completed',act:'✅ Order completed. Client notified via Email + SMS.',by:me,at:now,done:false,latest:true});
-      o.status='completed';
-      o.updated=new Date().toISOString().slice(0,16).replace('T',' ');
-      save(); renderDashStats(); renderDashRecent(); viewOrder(o.id);
-    },300);
-    toast('Order dispatched! Client notified via Email + SMS 📱','success');
+  const body = { actionKey: apiKey, notes };
+  if (key==='qc_fail')       body.qcFailReason = document.getElementById('qcReason')?.value || notes || 'Quality not met.';
+  if (key==='reject_credit') body.rejReason    = document.getElementById('rejReason')?.value || notes;
+  if (key==='dispatch') {
+    body.billingAmount = document.getElementById('dispAmt')?.value || '';
+    body.dispatchInfo  = document.getElementById('dispInfo')?.value || notes || 'Order dispatched.';
   }
 
-  save();
-  closeM('actionM');
-  renderDashStats();
-  renderDashRecent();
-  setTimeout(()=>viewOrder(o.id),150);
+  try {
+    const updated = await api('POST', `/orders/${o.id}/action`, body);
+    const mo = mapOrder(updated);
+    const idx = DB.orders.findIndex(x=>x.id===o.id);
+    if (idx>=0) DB.orders[idx] = mo;
+    CUR_ORDER = mo;
+    closeM('actionM');
+    renderDashStats();
+    renderDashRecent();
+    viewOrder(mo.id);
+    const msgs = {
+      approve_credit:'Credit approved! Assign to a partner now.',
+      reject_credit: 'Order on hold. Client notified.',
+      start_prod:    'Production started!',
+      goods_recv:    'Goods received! Ready for QC.',
+      start_qc:      'QC started!',
+      qc_pass:       'QC passed! Sent to billing team.',
+      qc_fail:       'QC failed. Partner notified for rework.',
+      dispatch:      'Order dispatched! Client notified. 📱',
+    };
+    toast(msgs[key]||'Action completed!', ['reject_credit','qc_fail'].includes(key)?'error':'success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function doAssign() {
-  const pid = parseInt(document.getElementById('assignPsel').value);
+async function doAssign() {
+  const pid  = document.getElementById('assignPsel').value;
   const note = document.getElementById('assignNote').value.trim();
   if (!pid) { toast('Please select a partner.','error'); return; }
-
-  const partner = DB.users.find(u=>u.id===pid);
-  const o = CUR_ORDER;
-
-  o.partnerId=pid; o.pName=partner.name;
-  o.timeline.forEach(t=>t.latest=false);
-  const now = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})+', '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-  o.timeline.push({st:'assigned',act:`👷 Assigned to ${partner.name}.${note?' Instructions: '+note:''}`,by:ME.name,at:now,done:false,latest:true,...(note?{note}:{})});
-  o.status='assigned';
-  o.updated=new Date().toISOString().slice(0,16).replace('T',' ');
-
-  logNotif('email',o.num,o.id,partner.email,'New Order Assigned to You');
-
-  save();
-  closeM('assignM');
-  document.getElementById('assignNote').value='';
-  toast(`Assigned to ${partner.name}! Email notification sent.`,'success');
-  renderDashStats();
-  viewOrder(o.id);
+  try {
+    const updated = await api('POST', `/orders/${CUR_ORDER.id}/action`, {
+      actionKey: 'assign_partner',
+      partnerId: pid,
+      notes: note,
+    });
+    const mo = mapOrder(updated);
+    const idx = DB.orders.findIndex(x=>x.id===CUR_ORDER.id);
+    if (idx>=0) DB.orders[idx] = mo;
+    CUR_ORDER = mo;
+    closeM('assignM');
+    document.getElementById('assignNote').value='';
+    toast(`Assigned to ${mo.pName}! Notification sent.`,'success');
+    renderDashStats();
+    viewOrder(mo.id);
+  } catch(e) { toast(e.message,'error'); }
 }
 
 // ================================================================
@@ -2694,55 +2737,34 @@ function fillClient(sel) {
     ? `<div class="alert alert-warn">⚠️ This client has a credit hold. Order will be auto-placed on hold.</div>` : '';
 }
 
-function submitOrder() {
+async function submitOrder() {
   const name = document.getElementById('no_name').value.trim();
   const desc = document.getElementById('no_desc').value.trim();
   if (!name) { toast('Client name is required.','error'); return; }
   if (!desc)  { toast('Order description is required.','error'); return; }
-
-  const cid = parseInt(document.getElementById('no_csel').value)||null;
-  const cl  = cid ? DB.clients.find(c=>c.id===cid) : null;
-  const hold = cl && cl.credit!=='good';
-  const st   = hold ? 'credit_rejected' : 'received';
-  const now2  = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})+', '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-  const now3  = new Date().toISOString().slice(0,16).replace('T',' ');
-
-  const ord = {
-    id: DB.nextId.order++,
-    num: genNum(),
-    clientId: cid,
-    cName: name,
-    cPhone: document.getElementById('no_ph').value.trim()||cl?.phone||'',
-    cEmail: document.getElementById('no_em').value.trim()||cl?.email||'',
-    src: document.getElementById('no_src').value,
-    desc,
-    status: st,
-    prio: document.getElementById('no_prio').value,
-    partnerId: null, pName: null,
-    amt: parseFloat(document.getElementById('no_amt').value)||0,
-    by: ME.id, created: now3, updated: now3,
-    rejReason: hold?'Client has pending dues — credit hold in effect.':'',
-    qNotes:'', bNotes:'', dispInfo:'',
-    timeline:[{
-      st, act: hold?'❌ Order created but placed ON HOLD — client has pending dues.':'Order received and logged.',
-      by:ME.name, at:now2, done:false, latest:true, ...(hold?{fail:true}:{})
-    }]
-  };
-
-  DB.orders.unshift(ord);
-  if (hold) { logNotif('email',ord.num,ord.id,ord.cEmail,'Order On Hold — Payment Pending'); logNotif('sms',ord.num,ord.id,ord.cPhone,'Order on hold'); }
-
-  // Reset
-  ['no_name','no_ph','no_em','no_desc','no_amt'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('no_csel').value='';
-  document.getElementById('no_prio').value='normal';
-  document.getElementById('noAlert').innerHTML='';
-
-  save();
-  renderDashStats();
-  renderDashRecent();
-  toast(hold?`Order ${ord.num} placed ON HOLD.`:`Order ${ord.num} created!`, hold?'error':'success');
-  viewOrder(ord.id);
+  const cid = document.getElementById('no_csel').value || null;
+  try {
+    const ord = await api('POST', '/orders', {
+      clientId:    cid,
+      clientName:  name,
+      clientPhone: document.getElementById('no_ph').value.trim(),
+      clientEmail: document.getElementById('no_em').value.trim(),
+      source:      document.getElementById('no_src').value,
+      description: desc,
+      priority:    document.getElementById('no_prio').value,
+      amount:      parseFloat(document.getElementById('no_amt').value)||0,
+    });
+    const mo = mapOrder(ord);
+    DB.orders.unshift(mo);
+    ['no_name','no_ph','no_em','no_desc','no_amt'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('no_csel').value='';
+    document.getElementById('no_prio').value='normal';
+    document.getElementById('noAlert').innerHTML='';
+    renderDashStats();
+    renderDashRecent();
+    toast(mo.status==='credit_rejected'?`Order ${mo.num} placed ON HOLD.`:`Order ${mo.num} created!`, mo.status==='credit_rejected'?'error':'success');
+    viewOrder(mo.id);
+  } catch(e) { toast(e.message,'error'); }
 }
 
 // ================================================================
@@ -2777,28 +2799,29 @@ function renderClients() {
     `).join('')}</tbody>`;
 }
 
-function saveClient() {
+async function saveClient() {
   const n = document.getElementById('cl_n').value.trim();
   if (!n) { toast('Client name required.','error'); return; }
-  DB.clients.push({
-    id: DB.nextId.client++, name:n,
-    company:document.getElementById('cl_co').value.trim(),
-    phone:document.getElementById('cl_ph').value.trim(),
-    email:document.getElementById('cl_em').value.trim(),
-    credit:document.getElementById('cl_cr').value,
-    pending:parseFloat(document.getElementById('cl_pd').value)||0,
-    notes:document.getElementById('cl_nt').value.trim(),
-  });
-  save();
-  closeM('clientM');
-  ['cl_n','cl_co','cl_ph','cl_em','cl_pd','cl_nt'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cl_cr').value='good';
-  // Refresh dropdown
-  const csel=document.getElementById('no_csel');
-  const last=DB.clients[DB.clients.length-1];
-  csel.innerHTML+=`<option value="${last.id}" data-n="${H(last.name)}" data-ph="${H(last.phone||'')}" data-em="${H(last.email||'')}" data-cr="${last.credit}">${H(last.name)}</option>`;
-  renderClients();
-  toast('Client added!','success');
+  try {
+    const c = await api('POST', '/clients', {
+      name:           n,
+      company:        document.getElementById('cl_co').value.trim(),
+      phone:          document.getElementById('cl_ph').value.trim(),
+      email:          document.getElementById('cl_em').value.trim(),
+      credit_status:  document.getElementById('cl_cr').value,
+      pending_amount: parseFloat(document.getElementById('cl_pd').value)||0,
+      notes:          document.getElementById('cl_nt').value.trim(),
+    });
+    const mc = mapClient(c);
+    DB.clients.push(mc);
+    closeM('clientM');
+    ['cl_n','cl_co','cl_ph','cl_em','cl_pd','cl_nt'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('cl_cr').value='good';
+    const csel=document.getElementById('no_csel');
+    csel.innerHTML+=`<option value="${mc.id}" data-n="${H(mc.name)}" data-ph="${H(mc.phone||'')}" data-em="${H(mc.email||'')}" data-cr="${mc.credit}">${H(mc.name)}</option>`;
+    renderClients();
+    toast('Client added!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
 function editClient(id) {
@@ -2814,19 +2837,24 @@ function editClient(id) {
   openM('editClientM');
 }
 
-function saveEditClient() {
-  const id = parseInt(document.getElementById('ec_id').value);
+async function saveEditClient() {
+  const id = document.getElementById('ec_id').value;
   const n  = document.getElementById('ec_n').value.trim();
   if (!n) { toast('Name required.','error'); return; }
-  const c = DB.clients.find(x=>x.id===id);
-  if (!c) return;
-  c.name=n; c.company=document.getElementById('ec_co').value.trim();
-  c.phone=document.getElementById('ec_ph').value.trim();
-  c.email=document.getElementById('ec_em').value.trim();
-  c.credit=document.getElementById('ec_cr').value;
-  c.pending=parseFloat(document.getElementById('ec_pd').value)||0;
-  save(); closeM('editClientM'); renderClients();
-  toast('Client updated!','success');
+  try {
+    const c = await api('PUT', `/clients/${id}`, {
+      name:           n,
+      company:        document.getElementById('ec_co').value.trim(),
+      phone:          document.getElementById('ec_ph').value.trim(),
+      email:          document.getElementById('ec_em').value.trim(),
+      credit_status:  document.getElementById('ec_cr').value,
+      pending_amount: parseFloat(document.getElementById('ec_pd').value)||0,
+    });
+    const idx = DB.clients.findIndex(x=>String(x.id)===String(id));
+    if (idx>=0) DB.clients[idx] = mapClient(c);
+    closeM('editClientM'); renderClients();
+    toast('Client updated!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
 // ================================================================
@@ -2850,23 +2878,22 @@ function renderTeam() {
     `).join('')}</tbody>`;
 }
 
-function saveUser() {
+async function saveUser() {
   const n=document.getElementById('u_n').value.trim();
   const e=document.getElementById('u_e').value.trim();
   const p=document.getElementById('u_p').value;
+  const ph=document.getElementById('u_ph').value.trim();
+  const r=document.getElementById('u_r').value;
   if (!n||!e) { toast('Name and email required.','error'); return; }
   if (!p)     { toast('Password required.','error'); return; }
-  if (DB.users.find(u=>u.email===e)) { toast('Email already exists.','error'); return; }
-  DB.users.push({
-    id:DB.nextId.user++, name:n, email:e, pwd:p,
-    phone:document.getElementById('u_ph').value.trim(),
-    role:document.getElementById('u_r').value,
-    active:true, lastLogin:'Never'
-  });
-  save(); closeM('userM');
-  ['u_n','u_e','u_ph','u_p'].forEach(id=>document.getElementById(id).value='');
-  renderTeam();
-  toast('Team member added!','success');
+  try {
+    const u = await api('POST', '/users', { name:n, email:e, password:p, phone:ph, role:r });
+    DB.users.push(mapUser(u));
+    closeM('userM');
+    ['u_n','u_e','u_ph','u_p'].forEach(id=>document.getElementById(id).value='');
+    renderTeam();
+    toast('Team member added!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
 // ================================================================
