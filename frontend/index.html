@@ -2997,7 +2997,71 @@
       document.getElementById('authScreen').style.display = 'flex';
       switchTab('pwd');
     }
+  // ── OTP AUTHENTICATION ─────────────────────────────────────
+  async function sendOtp() {
+    const email = document.getElementById('otpEmail').value.trim();
+    const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
 
+    if (!slug) return authAlert('Enter your company workspace slug first.');
+    if (!email) return authAlert('Please enter your email address.');
+
+    setBtnLoading('btnSendOtp', true, 'Sending Code...');
+    try {
+      await api('POST', '/auth/send-otp', { email, company_slug: slug });
+
+      // Hide Step 1, Show Step 2
+      document.getElementById('otpStep1').style.display = 'none';
+      document.getElementById('otpStep2').style.display = 'block';
+      document.getElementById('otpSentMsg').textContent = `Code sent to ${email}`;
+      document.getElementById('authAlert').style.display = 'none'; // clear errors
+    } catch (e) {
+      authAlert(e.message);
+    } finally {
+      setBtnLoading('btnSendOtp', false, 'Send Login Code →');
+    }
+  }
+
+  async function verifyOtp() {
+    const email = document.getElementById('otpEmail').value.trim();
+    const otp = document.getElementById('otpCode').value.trim();
+    const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+
+    if (!otp || otp.length < 6) return authAlert('Please enter the 6-digit code.');
+
+    setBtnLoading('btnVerifyOtp', true, 'Verifying...');
+    try {
+      const data = await api('POST', '/auth/verify-otp', { email, otp, company_slug: slug });
+      setToken(data.token);
+      loginSuccess(data.user, data.company?.slug, data.company?.name);
+    } catch (e) {
+      authAlert(e.message);
+    } finally {
+      setBtnLoading('btnVerifyOtp', false, 'Verify Code & Sign In →');
+    }
+  }
+
+  function resetOtp() {
+    document.getElementById('otpStep2').style.display = 'none';
+    document.getElementById('otpStep1').style.display = 'block';
+    document.getElementById('otpCode').value = '';
+    document.getElementById('authAlert').style.display = 'none';
+  }
+
+  // ── GOOGLE AUTHENTICATION ──────────────────────────────────
+  function startGoogleLogin() {
+    const slug = document.getElementById('companySlug')?.value.trim() || COMPANY_SLUG;
+    if (!slug) return authAlert('Enter your company workspace slug first.');
+
+    // Show loading UI
+    document.getElementById('btnGoogleSignin').style.display = 'none';
+    document.getElementById('googleProcessing').style.display = 'block';
+
+    // Save the slug to local storage so the backend knows where to route them after Google redirects back
+    localStorage.setItem('pending_google_slug', slug);
+
+    // Redirect the user to your Render backend's Google Auth endpoint
+    window.location.href = `${API_BASE}/auth/google?slug=${slug}`;
+  }
     async function tryAutoLogin() {
       const savedSlug = localStorage.getItem('of_slug');
       if (savedSlug) COMPANY_SLUG = savedSlug;
