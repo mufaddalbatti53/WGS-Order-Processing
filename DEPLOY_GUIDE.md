@@ -205,11 +205,11 @@ npm init -y
 npm install @capacitor/core @capacitor/android
 npx cap init "WGS Order Processing" com.wgs.orderprocessing --web-dir www
 mkdir www
-cp path/to/index.html www/index.html
+cp C:\Users\mufad\OneDrive\Desktop\WGS-Order-Processing\frontend/index.html www/index.html
 cp path/to/WGS.png www/WGS.png
 npx cap add android
 npx cap sync android
-npx cap open android
+z
 # In Android Studio: Build → Generate Signed Bundle/APK → APK
 ```
 
