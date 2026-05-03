@@ -3455,39 +3455,27 @@
         openM('actionM');
       }
 
-      async function doAction() {
-        const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
+  async function doAction() {
+    const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
 
-        // Attach the extra fields if they exist
-        if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
-        if (PEND_ACTION === 'qc_fail') body.qcFailReason = document.getElementById('qcReason')?.value || body.notes;
-        if (PEND_ACTION === 'reject_credit') body.rejReason = document.getElementById('rejReason')?.value || body.notes;
+    // Attach the extra fields if they exist
+    if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
+    if (PEND_ACTION === 'qc_fail') body.qcFailReason = document.getElementById('qcReason')?.value || body.notes;
+    if (PEND_ACTION === 'reject_credit') body.rejReason = document.getElementById('rejReason')?.value || body.notes;
 
-        try {
-          const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, body);
-          const updated = mapOrder(res);
-          const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
-          if (idx > -1) DB.orders[idx] = updated;
-          closeM('actionM');
-          toast('Action completed successfully!', 'success');
-          setupApp();
-          viewOrder(CUR_ORDER.id);
-        } catch (e) {
-          toast(e.message, 'error');
-        }
-      }
-      const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
-      if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
-
-      try {
-        const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, body);
-        const updated = mapOrder(res);
-        const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
-        if (idx > -1) DB.orders[idx] = updated;
-        closeM('actionM'); toast('Action completed successfully!', 'success');
-        setupApp(); viewOrder(CUR_ORDER.id);
-      } catch (e) { toast(e.message, 'error'); }
+    try {
+      const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, body);
+      const updated = mapOrder(res);
+      const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
+      if (idx > -1) DB.orders[idx] = updated;
+      closeM('actionM');
+      toast('Action completed successfully!', 'success');
+      setupApp();
+      viewOrder(CUR_ORDER.id);
+    } catch (e) {
+      toast(e.message, 'error');
     }
+  }
 
     async function doAssign() {
       const pid = document.getElementById('assignPsel').value;
