@@ -3397,26 +3397,85 @@
     }
 
     function buildActions(o) {
-      let btns = [];
-      if (ME.role === 'admin' && ['received', 'credit_check'].includes(o.status)) {
-        btns.push({ key: 'approve_credit', lbl: '✅ Approve Credit', cls: 'btn-success' });
-        btns.push({ key: 'reject_credit', lbl: '❌ Reject / Hold', cls: 'btn-danger' });
-        btns.push({ key: '__assign', lbl: '👷 Assign Partner', cls: 'btn-primary' });
+        let btns = [];
+
+        if (ME.role === 'admin') {
+          if (['received', 'credit_check'].includes(o.status)) {
+            btns.push({ key: 'approve_credit', lbl: '✅ Approve Credit', cls: 'btn-success' });
+            btns.push({ key: 'reject_credit', lbl: '❌ Reject / Hold', cls: 'btn-danger' });
+            btns.push({ key: '__assign', lbl: '👷 Assign Partner', cls: 'btn-primary' });
+          }
+          if (o.status === 'assigned') btns.push({ key: 'start_production', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
+          if (o.status === 'in_production') btns.push({ key: 'goods_received', lbl: '📦 Mark Goods Received', cls: 'btn-primary' });
+          if (o.status === 'goods_received') btns.push({ key: 'start_qc', lbl: '🔍 Start Quality Check', cls: 'btn-primary' });
+          if (o.status === 'quality_check') {
+            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
+            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
+          }
+          if (o.status === 'quality_failed') btns.push({ key: '__assign', lbl: '👷 Reassign Partner', cls: 'btn-primary' });
+          if (o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
+          if (o.status === 'credit_rejected') btns.push({ key: 'approve_credit', lbl: '♻️ Re-approve Credit', cls: 'btn-warn' });
+        }
+
+        if (ME.role === 'partner' && String(o.partnerId) === String(ME.id)) {
+          if (o.status === 'assigned') btns.push({ key: 'start_production', lbl: '⚙️ Start Production', cls: 'btn-primary' });
+          if (['in_production', 'quality_failed'].includes(o.status)) btns.push({ key: 'goods_received', lbl: '✅ Production Complete', cls: 'btn-success' });
+        }
+
+        if (ME.role === 'quality') {
+          if (['goods_received', 'quality_check'].includes(o.status)) {
+            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
+            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
+          }
+        }
+
+        if (ME.role === 'billing' && o.status === 'billing') {
+          btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
+        }
+
+        const area = document.getElementById('actArea');
+        if (!btns.length) {
+          area.innerHTML = `<p style="color:var(--text4);font-size:13.5px">No actions available for this order at your access level.</p>`;
+          return;
+        }
+        area.innerHTML = btns.map(b => `<button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>`).join('');
       }
-      if (ME.role === 'admin' && o.status === 'assigned') btns.push({ key: 'start_prod', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
-      if (ME.role === 'admin' && o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
 
-      document.getElementById('actArea').innerHTML = btns.map(b => `<button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>`).join('') || `<p class="muted">No actions available.</p>`;
-    }
+      function triggerAct(key) {
+        if (key === '__assign') return openM('assignM');
+        PEND_ACTION = key;
+        document.getElementById('actNotes').value = '';
+        document.getElementById('actExtra').innerHTML = '';
 
-    function triggerAct(key) {
-      if (key === '__assign') return openM('assignM');
-      PEND_ACTION = key; document.getElementById('actNotes').value = ''; document.getElementById('actExtra').innerHTML = '';
-      if (key === 'dispatch') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Dispatch Info</label><input type="text" id="dispInfo"></div>`;
-      openM('actionM');
-    }
+        // Bring back the extra input fields for specific actions!
+        if (key === 'dispatch') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Dispatch Info / Tracking</label><input type="text" id="dispInfo" placeholder="Courier + tracking number..."></div>`;
+        if (key === 'qc_fail') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Failure Reason *</label><textarea id="qcReason" rows="2" placeholder="Describe what failed quality check..."></textarea></div>`;
+        if (key === 'reject_credit') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Rejection Reason</label><textarea id="rejReason" rows="2" placeholder="E.g. Pending payment of ₹X from previous order..."></textarea></div>`;
 
-    async function doAction() {
+        openM('actionM');
+      }
+
+      async function doAction() {
+        const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
+
+        // Attach the extra fields if they exist
+        if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
+        if (PEND_ACTION === 'qc_fail') body.qcFailReason = document.getElementById('qcReason')?.value || body.notes;
+        if (PEND_ACTION === 'reject_credit') body.rejReason = document.getElementById('rejReason')?.value || body.notes;
+
+        try {
+          const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, body);
+          const updated = mapOrder(res);
+          const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
+          if (idx > -1) DB.orders[idx] = updated;
+          closeM('actionM');
+          toast('Action completed successfully!', 'success');
+          setupApp();
+          viewOrder(CUR_ORDER.id);
+        } catch (e) {
+          toast(e.message, 'error');
+        }
+      }
       const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
       if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
 
