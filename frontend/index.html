@@ -3400,7 +3400,44 @@
     function renderNotifLog() {
       if (document.getElementById('notifTbody')) document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `<tr><td><span class="muted" style="font-size:12.5px">${n.at}</span></td><td><span class="badge b-sky">${n.type}</span></td><td><span class="muted">${H(n.to)}</span></td><td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td></tr>`).join('');
     }
+  // ================================================================
+  // PASSWORD VISIBILITY TOGGLE (EYE ICON)
+  // ================================================================
+  function setupPasswordToggles() {
+    // Find every password input in the app
+    const passInputs = document.querySelectorAll('input[type="password"]');
 
+    passInputs.forEach(input => {
+      // Make the parent container relative so we can position the icon inside it
+      input.parentElement.style.position = 'relative';
+
+      // Make sure text doesn't type underneath the icon
+      input.style.paddingRight = '40px';
+
+      // Create the eye button
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.innerHTML = '👁️';
+      btn.style.cssText = 'position:absolute; right:12px; bottom:10px; background:none; border:none; cursor:pointer; font-size:16px; opacity:0.5; padding:0; transition:0.2s;';
+
+      // Add the click action
+      btn.onclick = function () {
+        if (input.type === 'password') {
+          input.type = 'text'; // Show password
+          btn.style.opacity = '1';
+        } else {
+          input.type = 'password'; // Hide password
+          btn.style.opacity = '0.5';
+        }
+      };
+
+      // Attach it to the screen
+      input.parentElement.appendChild(btn);
+    });
+  }
+
+  // Run this magic function as soon as the page loads
+  document.addEventListener('DOMContentLoaded', setupPasswordToggles);
     // Initialize App
     tryAutoLogin();
   </script>
