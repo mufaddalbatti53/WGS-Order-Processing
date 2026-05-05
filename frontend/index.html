@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>WGS Order Processing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
@@ -404,7 +404,9 @@
   position: fixed;
   top: 0;
   left: 0;
-  height: 100dvh; /* Fixes mobile cutoff */
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh; /* Modern standard */
+  height: -webkit-fill-available; /* The iOS Safari Fix */
   z-index: 200;
   box-shadow: 2px 0 20px rgba(15, 45, 82, 0.05);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
@@ -558,10 +560,9 @@
       min-width: 20px;
       text-align: center;
     }
-
-   .sb-footer {
-  padding: 12px 12px 24px 12px; /* Adds extra padding to the bottom */
-  padding-bottom: calc(24px + env(safe-area-inset-bottom)); /* Hardware safe area */
+.sb-footer {
+  padding: 12px 12px 32px 12px; /* Thick base padding */
+  padding-bottom: calc(32px + env(safe-area-inset-bottom)); /* hardware safe area */
   border-top: 1px solid var(--border3);
   background: #fff;
 }
