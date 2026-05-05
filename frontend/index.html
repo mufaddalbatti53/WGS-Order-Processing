@@ -394,22 +394,22 @@
     }
 
     /* SIDEBAR */
-    .sidebar {
-      width: var(--sidebar-w);
-      min-width: var(--sidebar-w);
-      background: #ffffff;
-      border-right: 1px solid var(--border3);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      z-index: 200;
-      box-shadow: 2px 0 20px rgba(15, 45, 82, 0.05);
-      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-      overflow: hidden;
-    }
+   .sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: #ffffff;
+  border-right: 1px solid var(--border3);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100dvh; /* Fixes mobile cutoff */
+  z-index: 200;
+  box-shadow: 2px 0 20px rgba(15, 45, 82, 0.05);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
 
     .sb-brand-area {
       padding: 20px 20px 16px;
@@ -559,10 +559,12 @@
       text-align: center;
     }
 
-    .sb-footer {
-      padding: 12px;
-      border-top: 1px solid var(--border3);
-    }
+   .sb-footer {
+  padding: 12px 12px 24px 12px; /* Adds extra padding to the bottom */
+  padding-bottom: calc(24px + env(safe-area-inset-bottom)); /* Hardware safe area */
+  border-top: 1px solid var(--border3);
+  background: #fff;
+}
 
     .btn-logout {
       width: 100%;
@@ -2236,7 +2238,7 @@
         <div class="nav-item admin-only" data-p="new-order" onclick="go('new-order')">
           <span class="nav-icon">➕</span> New Order
         </div>
-        <div class="nav-item" data-p="clients" onclick="go('clients')">
+        <div class="nav-item admin-only" data-p="clients" onclick="go('clients')">
           <span class="nav-icon">👥</span> Clients
         </div>
         <div class="sb-section admin-only">Administration</div>
