@@ -3094,11 +3094,12 @@
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = ME.role === 'admin' ? '' : 'none');
 
       try {
+       // Download data based on the user's role
         const [orders, clients, users, notifs] = await Promise.all([
-          api('GET', '/orders'),
-          api('GET', '/clients'),
-          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),
-          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] })
+          api('GET', '/orders'), // Everyone gets to see orders (backend filters them)
+          ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]), // Admins only
+          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),   // Admins only
+          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] }) // Admins only
         ]);
 
         DB.orders = orders.map(mapOrder);
