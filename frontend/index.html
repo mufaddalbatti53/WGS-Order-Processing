@@ -3060,9 +3060,12 @@
           <div class="field"><label>Pending Amount (₹)</label><input type="number" id="ec_pd" min="0" step="0.01"></div>
         </div>
       </div>
-      <div class="modal-ft">
-        <button class="btn btn-outline btn-sm" onclick="closeM('editClientM')">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveEditClient()">Save Changes →</button>
+      <div class="modal-ft" style="justify-content:space-between">
+        <button class="btn btn-danger btn-sm" id="ecDeleteBtn" onclick="deleteClient()">🗑️ Delete</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline btn-sm" onclick="closeM('editClientM')">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEditClient()">Save Changes →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3507,11 +3510,15 @@
     function renderOrders() {
       const q = (document.getElementById('srchOrders')?.value || '').toLowerCase();
       const sf = document.getElementById('fStatus')?.value || '';
+      const fSource = document.getElementById('fSrc')?.value || ''; // <-- 1. Read the Source Dropdown
+
       let list = DB.orders.filter(o => {
         if (sf && o.status !== sf) return false;
+        if (fSource && o.src !== fSource) return false; // <-- 2. Actually filter by it!
         if (q && ![o.num, o.cName].some(v => (v || '').toLowerCase().includes(q))) return false;
         return true;
       });
+
       if (document.getElementById('ordCnt')) document.getElementById('ordCnt').textContent = `— ${list.length} orders`;
       if (document.getElementById('ordersTbl')) document.getElementById('ordersTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Partner</th><th>Updated</th></tr></thead><tbody>${list.map(o => `
         <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><div class="strong">${H(o.cName)}</div></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${o.pName || '—'}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
@@ -3582,6 +3589,7 @@
         if (o.status === 'quality_failed') btns.push({ key: '__assign', lbl: '👷 Reassign Partner', cls: 'btn-primary' });
         if (o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
         if (o.status === 'credit_rejected') btns.push({ key: 'approve_credit', lbl: '♻️ Re-approve Credit', cls: 'btn-warn' });
+        btns.push({ key: 'delete_order', lbl: '🗑️ Delete Order', cls: 'btn-danger' });
       }
       if (ME.role === 'partner' && String(o.partnerId) === String(ME.id)) {
         if (o.status === 'assigned') btns.push({ key: 'start_production', lbl: '⚙️ Start Production', cls: 'btn-primary' });
@@ -3608,6 +3616,7 @@
 
     function triggerAct(key) {
       if (key === '__assign') return openM('assignM');
+      if (key === 'delete_order') return deleteOrder(CUR_ORDER.id); // <-- ADD THIS LINE
       PEND_ACTION = key;
       document.getElementById('actNotes').value = '';
       document.getElementById('actExtra').innerHTML = '';
@@ -3742,7 +3751,29 @@
       if (!confirm(`Permanently delete this user?`)) return;
       try { await api('DELETE', `/users/${id}`); DB.users = DB.users.filter(x => String(x.id) !== String(id)); closeM('editUserM'); renderTeam(); toast('User deleted.', 'error'); } catch (e) { toast(e.message, 'error'); }
     }
+    // --- DELETE CLIENT LOGIC ---
+    async function deleteClient() {
+      const id = document.getElementById('ec_id').value;
+      if (!confirm('Are you sure you want to PERMANENTLY delete this client?')) return;
+      try {
+        await api('DELETE', `/clients/${id}`);
+        DB.clients = DB.clients.filter(x => String(x.id) !== String(id));
+        closeM('editClientM');
+        renderClients();
+        toast('Client deleted successfully.', 'error');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
+    // --- DELETE ORDER LOGIC ---
+    async function deleteOrder(id) {
+      if (!confirm('Are you sure you want to PERMANENTLY delete this order? This cannot be undone.')) return;
+      try {
+        await api('DELETE', `/orders/${id}`);
+        DB.orders = DB.orders.filter(x => String(x.id) !== String(id));
+        toast('Order deleted successfully.', 'error');
+        go('orders'); // Immediately send them back to the orders list
+      } catch (e) { toast(e.message, 'error'); }
+    }
     function renderNotifLog() {
       if (document.getElementById('notifTbody')) document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `<tr><td><span class="muted" style="font-size:12.5px">${n.at}</span></td><td><span class="badge b-sky">${n.type}</span></td><td><span class="muted">${H(n.to)}</span></td><td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td></tr>`).join('');
     }

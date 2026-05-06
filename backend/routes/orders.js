@@ -197,5 +197,10 @@ router.post('/:id/action', async (req, res) => {
     res.json({ ...final, id: final._id, partner_name: final.partner_id?.name });
   } catch (e) { console.error('Action error:', e); res.status(500).json({ error: 'Action failed: ' + e.message }); }
 });
-
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await Order.findOneAndDelete({ _id: req.params.id, company_id: req.user.company_id });
+    res.json({ message: 'Order deleted' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 module.exports = router;

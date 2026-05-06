@@ -65,5 +65,10 @@ router.put('/:id', adminOnly, async (req, res) => {
     res.json({ ...updated, id: updated._id });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await Client.findOneAndDelete({ _id: req.params.id, company_id: req.user.company_id });
+    res.json({ message: 'Client deleted' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 module.exports = router;
