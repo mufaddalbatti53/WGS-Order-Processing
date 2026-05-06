@@ -394,24 +394,27 @@
     }
 
     /* SIDEBAR */
-   .sidebar {
-  width: var(--sidebar-w);
-  min-width: var(--sidebar-w);
-  background: #ffffff;
-  border-right: 1px solid var(--border3);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh; /* Fallback for older browsers */
-  height: 100dvh; /* Modern standard */
-  height: -webkit-fill-available; /* The iOS Safari Fix */
-  z-index: 200;
-  box-shadow: 2px 0 20px rgba(15, 45, 82, 0.05);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-}
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: #ffffff;
+      border-right: 1px solid var(--border3);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      /* Fallback for older browsers */
+      height: 100dvh;
+      /* Modern standard */
+      height: -webkit-fill-available;
+      /* The iOS Safari Fix */
+      z-index: 200;
+      box-shadow: 2px 0 20px rgba(15, 45, 82, 0.05);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
 
     .sb-brand-area {
       padding: 20px 20px 16px;
@@ -560,12 +563,15 @@
       min-width: 20px;
       text-align: center;
     }
-.sb-footer {
-  padding: 12px 12px 32px 12px; /* Thick base padding */
-  padding-bottom: calc(32px + env(safe-area-inset-bottom)); /* hardware safe area */
-  border-top: 1px solid var(--border3);
-  background: #fff;
-}
+
+    .sb-footer {
+      padding: 12px 12px 32px 12px;
+      /* Thick base padding */
+      padding-bottom: calc(32px + env(safe-area-inset-bottom));
+      /* hardware safe area */
+      border-top: 1px solid var(--border3);
+      background: #fff;
+    }
 
     .btn-logout {
       width: 100%;
@@ -1902,141 +1908,452 @@
     /* =============================================================
    NATIVE MOBILE APP OVERRIDES (Dashboard & Inner App)
    ============================================================= */
-/* =============================================================
+    /* =============================================================
    ⚡ HIGH-PERFORMANCE NATIVE MOBILE OVERRIDES ⚡
    (Replaces all previous mobile media queries)
    ============================================================= */
-@media (max-width: 960px) {
-  .sidebar { transform: translateX(-100%); width: 280px; box-shadow: none; transition: transform 0.3s ease; }
-  .sidebar.mob-open { transform: translateX(0); box-shadow: 12px 0 40px rgba(15,45,82,0.15); }
-  .main { margin-left: 0; }
-  .menu-btn { display: flex; }
-  .order-split { grid-template-columns: 1fr; }
-  .f-row { grid-template-columns: 1fr; gap: 0; }
-}
+    @media (max-width: 960px) {
+      .sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+        box-shadow: none;
+        transition: transform 0.3s ease;
+      }
 
-@media (max-width: 768px) {
-  /* 1. Stop layout thrashing */
-  .page.show { animation: none !important; transform: none !important; }
+      .sidebar.mob-open {
+        transform: translateX(0);
+        box-shadow: 12px 0 40px rgba(15, 45, 82, 0.15);
+      }
 
-  /* 2. Fast Header (NO BLUR to stop lag) */
-  .topbar {
-    background: rgba(255, 255, 255, 0.98) !important;
-    padding: 0 16px;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .topbar-title { font-size: 18px; }
+      .main {
+        margin-left: 0;
+      }
 
-  /* 3. 2-Column Stats Grid (Fast) */
-  .stats-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  .stat-card {
-    min-width: 0 !important; width: 100% !important; padding: 16px !important;
-    border-radius: 16px !important; border: 1px solid var(--border) !important;
-    box-shadow: 0 2px 4px rgba(15,45,82,0.03) !important; /* Micro shadow */
-  }
-  .sc-num { font-size: 32px !important; } 
+      .menu-btn {
+        display: flex;
+      }
 
-  /* 4. Vertical Flow Timeline */
-  .flow-wrap { overflow-x: hidden !important; padding: 16px !important; margin: 0 !important; }
-  .flow { display: flex !important; flex-direction: column !important; align-items: flex-start !important; min-width: 0 !important; gap: 0 !important; }
-  .flow > div:not(.flow-node) { display: none !important; }
-  .flow-node { flex-direction: row !important; align-items: center !important; gap: 16px !important; width: 100% !important; padding: 16px 0 !important; position: relative; }
-  .flow-label { text-align: left !important; font-size: 15px !important; max-width: none !important; }
-  .flow-sublabel { text-align: left !important; font-size: 13px !important; margin-top: 2px; }
-  .flow-node:not(:last-child)::after {
-    content: ''; position: absolute; left: 27px; top: 56px; bottom: -16px; width: 2px;
-    background: linear-gradient(180deg, var(--sky-xl), var(--border2)); z-index: 0;
-  }
-  .flow-circle { z-index: 1; background: #fff !important; } 
+      .order-split {
+        grid-template-columns: 1fr;
+      }
 
-  /* 5. Floating Action Button (Hardware Accelerated) */
-  .filter-bar .btn-primary, .wb-btn .btn-outline {
-    position: fixed !important; bottom: 24px !important; right: 24px !important;
-    width: 60px !important; height: 60px !important; border-radius: 50% !important;
-    padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important;
-    font-size: 0px !important; background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important; color: white !important; border: none !important;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important; z-index: 9999 !important;
-    transform: translateZ(0); /* Forces GPU rendering to prevent lag */
-  }
-  .filter-bar .btn-primary::after, .wb-btn .btn-outline::after { content: '+'; font-size: 32px; font-weight: 300; margin-bottom: 2px; }
+      .f-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
 
-  /* 6. Layout Spacing */
-  .content { padding: 16px; overflow-x: hidden; }
-  .welcome-banner {
-    border-radius: 16px !important; padding: 24px 20px !important;
-    margin-bottom: 24px !important; border: none !important;
-    flex-direction: column; align-items: flex-start; 
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1) !important; /* Lighter shadow */
-  }
-  .welcome-banner::before, .welcome-banner::after { display: none !important; } /* Removes laggy background elements */
-  .wb-greeting { font-size: 24px !important; line-height: 1.2; margin-bottom: 6px; }
-  
-  .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .filter-bar input, .filter-bar select { min-width: unset; width: 100%; font-size: 16px !important; }
-  .order-hero { flex-direction: column; align-items: flex-start; gap: 12px; }
+    @media (max-width: 768px) {
 
-  /* 7. Mobile Tables */
-  .tbl thead { display: none; }
-  .tbl tbody tr { display: flex; flex-direction: column; padding: 16px 0; border-bottom: 1px solid var(--border3) !important; position: relative; }
-  .tbl td { padding: 4px 16px !important; border: none !important; display: flex; align-items: center; justify-content: space-between; }
-  
-  #ordersTbl td:nth-child(1)::before { content: "Order #"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
-  #ordersTbl td:nth-child(2)::before { content: "Client"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
-  #ordersTbl td:nth-child(3)::before { content: "Status"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
-  #ordersTbl td:nth-child(4)::before { content: "Partner"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
-  #ordersTbl td:nth-child(5)::before { content: "Updated"; font-size: 11px; color: var(--text4); text-transform: uppercase; font-weight: 700;}
+      /* 1. Stop layout thrashing */
+      .page.show {
+        animation: none !important;
+        transform: none !important;
+      }
 
-  /* Forms fixes (Stops iOS Zoom) */
-  .field input, .field select, .field textarea { font-size: 16px !important; padding: 14px; }
-  .dr { grid-template-columns: 1fr; gap: 2px; padding: 12px 16px; }
-  .dr-lbl { font-size: 10px; }
-  .tl-item { padding-bottom: 24px; }
+      /* 2. Fast Header (NO BLUR to stop lag) */
+      .topbar {
+        background: rgba(255, 255, 255, 0.98) !important;
+        padding: 0 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
 
-  /* 8. Optimized Dashboard Feed */
-  #dashTbl { display: block; }
-  #dashTbl tbody { display: flex; flex-direction: column; gap: 10px; }
-  #dashTbl tbody tr {
-    background: #fff !important; border-radius: 12px !important; 
-    border: 1px solid var(--border) !important;
-    box-shadow: 0 2px 4px rgba(15,45,82,0.03) !important; /* Micro shadow */
-    padding: 14px !important; display: grid !important; 
-    grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 8px; align-items: center;
-  }
-  #dashTbl td::before { display: none !important; }
-  #dashTbl td { padding: 0 !important; display: flex !important; align-items: center; }
-  #dashTbl td:nth-child(1) { grid-column: 1; grid-row: 1; }
-  #dashTbl td:nth-child(1) .mono { font-size: 15px !important; color: var(--text); }
-  #dashTbl td:nth-child(3) { grid-column: 2; grid-row: 1; justify-content: flex-end; }
-  #dashTbl td:nth-child(2) { grid-column: 1; grid-row: 2; }
-  #dashTbl td:nth-child(2) .strong { font-size: 13.5px !important; color: var(--text3); font-weight: 600; }
-  #dashTbl td:nth-child(4) { grid-column: 2; grid-row: 2; justify-content: flex-end; }
-  #dashTbl td:nth-child(4) .muted { font-size: 12px !important; color: var(--text4); }
-  #pg-dashboard .card { background: transparent !important; border: none !important; box-shadow: none !important; }
-  #pg-dashboard .card-top { padding: 12px 4px 16px !important; border: none !important; }
-  #pg-dashboard .card-top h3 { font-size: 18px !important; font-weight: 800 !important; }
-}
+      .topbar-title {
+        font-size: 18px;
+      }
 
-@media (max-width: 640px) {
-  #authScreen { padding: 0 !important; background: #fff !important; align-items: flex-start; }
-  .auth-bg-circles { display: none; }
-  .auth-card { width: 100%; max-width: 100%; min-height: 100vh; max-height: none; border-radius: 0 !important; border: none !important; box-shadow: none !important; padding: 32px 20px 80px !important; background: transparent !important; }
-  .auth-logo { margin-bottom: 24px; }
-  .auth-logo-icon { width: 64px; height: 64px; font-size: 24px; margin-bottom: 12px; }
-  .auth-logo-name { font-size: 22px; }
-  .auth-tab { font-size: 11px; padding: 8px 2px; }
-  .field-wrap label { font-size: 11px; }
-  .field-wrap input { font-size: 16px !important; padding: 14px 16px; }
-  .btn-signin { padding: 15px; font-size: 16px; margin-top: 8px; }
-}
+      /* 3. 2-Column Stats Grid (Fast) */
+      .stats-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .stat-card {
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 16px !important;
+        border-radius: 16px !important;
+        border: 1px solid var(--border) !important;
+        box-shadow: 0 2px 4px rgba(15, 45, 82, 0.03) !important;
+        /* Micro shadow */
+      }
+
+      .sc-num {
+        font-size: 32px !important;
+      }
+
+      /* 4. Vertical Flow Timeline */
+      .flow-wrap {
+        overflow-x: hidden !important;
+        padding: 16px !important;
+        margin: 0 !important;
+      }
+
+      .flow {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        min-width: 0 !important;
+        gap: 0 !important;
+      }
+
+      .flow>div:not(.flow-node) {
+        display: none !important;
+      }
+
+      .flow-node {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 16px !important;
+        width: 100% !important;
+        padding: 16px 0 !important;
+        position: relative;
+      }
+
+      .flow-label {
+        text-align: left !important;
+        font-size: 15px !important;
+        max-width: none !important;
+      }
+
+      .flow-sublabel {
+        text-align: left !important;
+        font-size: 13px !important;
+        margin-top: 2px;
+      }
+
+      .flow-node:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 27px;
+        top: 56px;
+        bottom: -16px;
+        width: 2px;
+        background: linear-gradient(180deg, var(--sky-xl), var(--border2));
+        z-index: 0;
+      }
+
+      .flow-circle {
+        z-index: 1;
+        background: #fff !important;
+      }
+
+      /* 5. Floating Action Button (Hardware Accelerated) */
+      .filter-bar .btn-primary,
+      .wb-btn .btn-outline {
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0px !important;
+        background: linear-gradient(135deg, var(--sky-d), var(--blue-700)) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        z-index: 9999 !important;
+        transform: translateZ(0);
+        /* Forces GPU rendering to prevent lag */
+      }
+
+      .filter-bar .btn-primary::after,
+      .wb-btn .btn-outline::after {
+        content: '+';
+        font-size: 32px;
+        font-weight: 300;
+        margin-bottom: 2px;
+      }
+
+      /* 6. Layout Spacing */
+      .content {
+        padding: 16px;
+        overflow-x: hidden;
+      }
+
+      .welcome-banner {
+        border-radius: 16px !important;
+        padding: 24px 20px !important;
+        margin-bottom: 24px !important;
+        border: none !important;
+        flex-direction: column;
+        align-items: flex-start;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1) !important;
+        /* Lighter shadow */
+      }
+
+      .welcome-banner::before,
+      .welcome-banner::after {
+        display: none !important;
+      }
+
+      /* Removes laggy background elements */
+      .wb-greeting {
+        font-size: 24px !important;
+        line-height: 1.2;
+        margin-bottom: 6px;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .filter-bar input,
+      .filter-bar select {
+        min-width: unset;
+        width: 100%;
+        font-size: 16px !important;
+      }
+
+      .order-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      /* 7. Mobile Tables */
+      .tbl thead {
+        display: none;
+      }
+
+      .tbl tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--border3) !important;
+        position: relative;
+      }
+
+      .tbl td {
+        padding: 4px 16px !important;
+        border: none !important;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #ordersTbl td:nth-child(1)::before {
+        content: "Order #";
+        font-size: 11px;
+        color: var(--text4);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      #ordersTbl td:nth-child(2)::before {
+        content: "Client";
+        font-size: 11px;
+        color: var(--text4);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      #ordersTbl td:nth-child(3)::before {
+        content: "Status";
+        font-size: 11px;
+        color: var(--text4);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      #ordersTbl td:nth-child(4)::before {
+        content: "Partner";
+        font-size: 11px;
+        color: var(--text4);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      #ordersTbl td:nth-child(5)::before {
+        content: "Updated";
+        font-size: 11px;
+        color: var(--text4);
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      /* Forms fixes (Stops iOS Zoom) */
+      .field input,
+      .field select,
+      .field textarea {
+        font-size: 16px !important;
+        padding: 14px;
+      }
+
+      .dr {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 12px 16px;
+      }
+
+      .dr-lbl {
+        font-size: 10px;
+      }
+
+      .tl-item {
+        padding-bottom: 24px;
+      }
+
+      /* 8. Optimized Dashboard Feed */
+      #dashTbl {
+        display: block;
+      }
+
+      #dashTbl tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #dashTbl tbody tr {
+        background: #fff !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--border) !important;
+        box-shadow: 0 2px 4px rgba(15, 45, 82, 0.03) !important;
+        /* Micro shadow */
+        padding: 14px !important;
+        display: grid !important;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      #dashTbl td::before {
+        display: none !important;
+      }
+
+      #dashTbl td {
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+      }
+
+      #dashTbl td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      #dashTbl td:nth-child(1) .mono {
+        font-size: 15px !important;
+        color: var(--text);
+      }
+
+      #dashTbl td:nth-child(3) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-end;
+      }
+
+      #dashTbl td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      #dashTbl td:nth-child(2) .strong {
+        font-size: 13.5px !important;
+        color: var(--text3);
+        font-weight: 600;
+      }
+
+      #dashTbl td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 2;
+        justify-content: flex-end;
+      }
+
+      #dashTbl td:nth-child(4) .muted {
+        font-size: 12px !important;
+        color: var(--text4);
+      }
+
+      #pg-dashboard .card {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      #pg-dashboard .card-top {
+        padding: 12px 4px 16px !important;
+        border: none !important;
+      }
+
+      #pg-dashboard .card-top h3 {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #authScreen {
+        padding: 0 !important;
+        background: #fff !important;
+        align-items: flex-start;
+      }
+
+      .auth-bg-circles {
+        display: none;
+      }
+
+      .auth-card {
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+        max-height: none;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 32px 20px 80px !important;
+        background: transparent !important;
+      }
+
+      .auth-logo {
+        margin-bottom: 24px;
+      }
+
+      .auth-logo-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+
+      .auth-logo-name {
+        font-size: 22px;
+      }
+
+      .auth-tab {
+        font-size: 11px;
+        padding: 8px 2px;
+      }
+
+      .field-wrap label {
+        font-size: 11px;
+      }
+
+      .field-wrap input {
+        font-size: 16px !important;
+        padding: 14px 16px;
+      }
+
+      .btn-signin {
+        padding: 15px;
+        font-size: 16px;
+        margin-top: 8px;
+      }
+    }
   </style>
 </head>
 
@@ -2596,7 +2913,7 @@
         <!-- ====== NOTIFICATIONS LOG ====== -->
         <div class="page" id="pg-notif-log">
           <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px" id="notifStats"></div>
-          
+
           <div class="card">
             <div class="card-top">
               <h3>Notification Log</h3>
@@ -3097,7 +3414,7 @@
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = ME.role === 'admin' ? '' : 'none');
 
       try {
-       // Download data based on the user's role
+        // Download data based on the user's role
         const [orders, clients, users, notifs] = await Promise.all([
           api('GET', '/orders'), // Everyone gets to see orders (backend filters them)
           ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]), // Admins only
@@ -3295,7 +3612,14 @@
       document.getElementById('actNotes').value = '';
       document.getElementById('actExtra').innerHTML = '';
 
-      if (key === 'dispatch') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Dispatch Info / Tracking</label><input type="text" id="dispInfo" placeholder="Courier + tracking number..."></div>`;
+      if (key === 'dispatch') {
+        // --- ADDED THE UPLOAD BILL OPTION HERE ---
+        document.getElementById('actExtra').innerHTML = `
+          <div class="field"><label>Dispatch Info / Tracking</label><input type="text" id="dispInfo" placeholder="Courier + tracking number..."></div>
+          <div class="field"><label>Upload Bill (PDF/Excel) <span style="text-transform:none;font-weight:500;color:var(--text4)">(optional)</span></label>
+          <input type="file" id="billFile" accept=".pdf, .xls, .xlsx"></div>
+        `;
+      }
       if (key === 'qc_fail') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Failure Reason *</label><textarea id="qcReason" rows="2" placeholder="Describe what failed quality check..."></textarea></div>`;
       if (key === 'reject_credit') document.getElementById('actExtra').innerHTML = `<div class="field"><label>Rejection Reason</label><textarea id="rejReason" rows="2" placeholder="E.g. Pending payment of ₹X from previous order..."></textarea></div>`;
 
@@ -3304,7 +3628,29 @@
 
     async function doAction() {
       const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
-      if (PEND_ACTION === 'dispatch') body.dispatchInfo = document.getElementById('dispInfo')?.value;
+
+      if (PEND_ACTION === 'dispatch') {
+        body.dispatchInfo = document.getElementById('dispInfo')?.value;
+
+        // --- ADDED THE FILE READING LOGIC HERE ---
+        const fileInput = document.getElementById('billFile');
+        if (fileInput && fileInput.files.length > 0) {
+          try {
+            const file = fileInput.files[0];
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = e => reject(e);
+            });
+            body.billFileBase64 = base64; // Sent as a Base64 string so your API JSON accepts it normally!
+            body.billFileName = file.name;
+          } catch (e) {
+            return toast('Failed to read the bill file.', 'error');
+          }
+        }
+      }
+
       if (PEND_ACTION === 'qc_fail') body.qcFailReason = document.getElementById('qcReason')?.value || body.notes;
       if (PEND_ACTION === 'reject_credit') body.rejReason = document.getElementById('rejReason')?.value || body.notes;
 
@@ -3400,44 +3746,44 @@
     function renderNotifLog() {
       if (document.getElementById('notifTbody')) document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `<tr><td><span class="muted" style="font-size:12.5px">${n.at}</span></td><td><span class="badge b-sky">${n.type}</span></td><td><span class="muted">${H(n.to)}</span></td><td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td></tr>`).join('');
     }
-  // ================================================================
-  // PASSWORD VISIBILITY TOGGLE (EYE ICON)
-  // ================================================================
-  function setupPasswordToggles() {
-    // Find every password input in the app
-    const passInputs = document.querySelectorAll('input[type="password"]');
+    // ================================================================
+    // PASSWORD VISIBILITY TOGGLE (EYE ICON)
+    // ================================================================
+    function setupPasswordToggles() {
+      // Find every password input in the app
+      const passInputs = document.querySelectorAll('input[type="password"]');
 
-    passInputs.forEach(input => {
-      // Make the parent container relative so we can position the icon inside it
-      input.parentElement.style.position = 'relative';
+      passInputs.forEach(input => {
+        // Make the parent container relative so we can position the icon inside it
+        input.parentElement.style.position = 'relative';
 
-      // Make sure text doesn't type underneath the icon
-      input.style.paddingRight = '40px';
+        // Make sure text doesn't type underneath the icon
+        input.style.paddingRight = '40px';
 
-      // Create the eye button
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.innerHTML = '👁️';
-      btn.style.cssText = 'position:absolute; right:12px; bottom:10px; background:none; border:none; cursor:pointer; font-size:16px; opacity:0.5; padding:0; transition:0.2s;';
+        // Create the eye button
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = '👁️';
+        btn.style.cssText = 'position:absolute; right:12px; bottom:10px; background:none; border:none; cursor:pointer; font-size:16px; opacity:0.5; padding:0; transition:0.2s;';
 
-      // Add the click action
-      btn.onclick = function () {
-        if (input.type === 'password') {
-          input.type = 'text'; // Show password
-          btn.style.opacity = '1';
-        } else {
-          input.type = 'password'; // Hide password
-          btn.style.opacity = '0.5';
-        }
-      };
+        // Add the click action
+        btn.onclick = function () {
+          if (input.type === 'password') {
+            input.type = 'text'; // Show password
+            btn.style.opacity = '1';
+          } else {
+            input.type = 'password'; // Hide password
+            btn.style.opacity = '0.5';
+          }
+        };
 
-      // Attach it to the screen
-      input.parentElement.appendChild(btn);
-    });
-  }
+        // Attach it to the screen
+        input.parentElement.appendChild(btn);
+      });
+    }
 
-  // Run this magic function as soon as the page loads
-  document.addEventListener('DOMContentLoaded', setupPasswordToggles);
+    // Run this magic function as soon as the page loads
+    document.addEventListener('DOMContentLoaded', setupPasswordToggles);
     // Initialize App
     tryAutoLogin();
   </script>
