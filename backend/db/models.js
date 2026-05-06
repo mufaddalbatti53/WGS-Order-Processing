@@ -74,7 +74,7 @@ const OrderSchema = new Schema({
   source: { type: String, default: 'direct' },
   description: { type: String, default: '' },
   status: { type: String, default: 'received' },
-  priority: { type: String, enum: ['low', 'normal', 'high', 'urgent'], default: 'normal' },
+  priority: { type: String, enum: ['low', 'normal', 'critical', 'urgent'], default: 'normal' },
   partner_id: { type: Schema.Types.ObjectId, ref: 'User' },
   amount: { type: Number, default: 0 },
   rej_reason: { type: String },
