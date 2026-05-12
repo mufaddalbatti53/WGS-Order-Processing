@@ -6,6 +6,16 @@ const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
 router.use(auth, adminOnly);
 
+const fs = require('fs');
+const { google } = require('googleapis');
+const { User, Client, Order, Notification } = require('../db/models');
+
+// Google Drive setup
+const drive = google.drive({ version: 'v3', auth: new google.auth.GoogleAuth({
+  keyFile: 'path/to/credentials.json',
+  scopes: ['https://www.googleapis.com/auth/drive.file'],
+}) });
+
 router.get('/', async (req, res) => {
   try {
     const users = await User.find({ company_id: req.company_id }).select('-password').sort({ role: 1, name: 1 }).lean();
@@ -31,6 +41,31 @@ router.post('/', async (req, res) => {
     const safe = await User.findById(u._id).select('-password').lean();
     res.status(201).json({ ...safe, id: safe._id });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/backup', async (req, res) => {
+  try {
+    // Fetch data
+    const staff = await User.find({ company_id: req.company_id }).lean();
+    const clients = await Client.find({ company_id: req.company_id }).lean();
+    const orders = await Order.find({ company_id: req.company_id }).lean();
+    const notifications = await Notification.find({ company_id: req.company_id }).lean();
+
+    // Create backup file
+    const backupData = { staff, clients, orders, notifications };
+    const backupFile = `backup-${Date.now()}.json`;
+    fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+
+    // Upload to Google Drive
+    const driveResponse = await drive.files.create({
+      requestBody: { name: backupFile, mimeType: 'application/json' },
+      media: { mimeType: 'application/json', body: fs.createReadStream(backupFile) },
+    });
+
+    res.json({ message: 'Backup successful', driveFileId: driveResponse.data.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.put('/:id', async (req, res) => {

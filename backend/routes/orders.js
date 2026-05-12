@@ -1,19 +1,26 @@
-// routes/orders.js — company-scoped (MongoDB)
+// routes/orders.js — company-scoped (MongoDB) + WhatsApp at every stage
 const express = require('express');
 const { Order, User, Client } = require('../db/models');
 const notify = require('../services/notify');
+const wa = require('../services/whatsapp');
 const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
 router.use(auth);
 
-function genOrderNum(companySlug) {
+function genOrderNum() {
   const d = new Date();
   const date = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   return `ORD-${date}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
 function addTimeline(order, status, action, userId, actorName, notes, isFail) {
-  order.timeline.push({ status, action, performed_by: userId, actor_name: actorName, notes: notes || null, is_fail: isFail || false });
+  order.timeline.push({
+    status, action,
+    performed_by: userId,
+    actor_name: actorName,
+    notes: notes || null,
+    is_fail: isFail || false,
+  });
 }
 
 const BASE_POPULATE = [
@@ -83,13 +90,25 @@ router.post('/', adminOnly, async (req, res) => {
       created_by: req.user._id,
       timeline: [{
         status: initialStatus,
-        action: initialStatus === 'credit_rejected' ? '❌ Order placed ON HOLD — pending dues.' : 'Order received and logged.',
-        performed_by: req.user._id, actor_name: req.user.name, notes: creditNote, is_fail: initialStatus === 'credit_rejected',
-      }]
+        action: initialStatus === 'credit_rejected'
+          ? '❌ Order placed ON HOLD — pending dues.'
+          : 'Order received and logged.',
+        performed_by: req.user._id,
+        actor_name: req.user.name,
+        notes: creditNote,
+        is_fail: initialStatus === 'credit_rejected',
+      }],
     });
 
+    // Email + WhatsApp notifications
     notify.notifyOrderReceived(order, req.company_id).catch(console.error);
-    if (initialStatus === 'credit_rejected') notify.notifyCreditRejected(order).catch(console.error);
+    wa.waOrderReceived(order).catch(console.error);
+
+    if (initialStatus === 'credit_rejected') {
+      notify.notifyCreditRejected(order).catch(console.error);
+      wa.waCreditRejected(order).catch(console.error);
+    }
+
     res.status(201).json({ ...order.toObject(), id: order._id });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -103,10 +122,13 @@ router.post('/:id/action', async (req, res) => {
     const u = req.user, uName = u.name;
 
     switch (actionKey) {
+
       case 'approve_credit':
         if (u.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         order.status = 'credit_check';
         addTimeline(order, 'credit_check', '✅ Credit approved. Ready to assign partner.', u._id, uName, notes);
+        await order.save();
+        wa.waCreditApproved(order).catch(console.error);
         break;
 
       case 'reject_credit': {
@@ -116,6 +138,7 @@ router.post('/:id/action', async (req, res) => {
         addTimeline(order, 'credit_rejected', '❌ Credit rejected. Client notified.', u._id, uName, r, true);
         await order.save();
         notify.notifyCreditRejected(order).catch(console.error);
+        wa.waCreditRejected(order).catch(console.error);
         break;
       }
 
@@ -128,6 +151,7 @@ router.post('/:id/action', async (req, res) => {
         addTimeline(order, 'assigned', `👷 Assigned to ${p.name}.`, u._id, uName, notes ? `Instructions: ${notes}` : null);
         await order.save();
         notify.notifyPartnerAssigned(order, p).catch(console.error);
+        wa.waPartnerAssigned(order, p).catch(console.error);
         break;
       }
 
@@ -136,6 +160,8 @@ router.post('/:id/action', async (req, res) => {
         if (u.role === 'partner' && String(order.partner_id) !== String(u._id)) return res.status(403).json({ error: 'Not your order' });
         order.status = 'in_production';
         addTimeline(order, 'in_production', '⚙️ Production started.', u._id, uName, notes);
+        await order.save();
+        wa.waProductionStarted(order).catch(console.error);
         break;
 
       case 'goods_received':
@@ -146,12 +172,14 @@ router.post('/:id/action', async (req, res) => {
         addTimeline(order, 'goods_received', '📦 Production complete. Goods returned to Team A.', u._id, uName, notes);
         await order.save();
         notify.notifyGoodsReceived(order, req.company_id).catch(console.error);
+        wa.waGoodsReceived(order).catch(console.error);
         break;
 
       case 'start_qc':
         if (!['admin', 'quality'].includes(u.role)) return res.status(403).json({ error: 'Not allowed' });
         order.status = 'quality_check';
         addTimeline(order, 'quality_check', '🔍 Quality check in progress.', u._id, uName, notes);
+        // No client WA for internal QC start — just move status
         break;
 
       case 'qc_pass':
@@ -160,6 +188,7 @@ router.post('/:id/action', async (req, res) => {
         addTimeline(order, 'billing', '✅ QC passed. Sent to billing.', u._id, uName, notes);
         await order.save();
         notify.notifyQCPassed(order, req.company_id).catch(console.error);
+        wa.waQCPassed(order).catch(console.error);
         break;
 
       case 'qc_fail': {
@@ -171,6 +200,8 @@ router.post('/:id/action', async (req, res) => {
           const p2 = await User.findById(order.partner_id);
           if (p2) notify.notifyQCFailed(order, p2, reason).catch(console.error);
         }
+        await order.save();
+        wa.waQCFailed(order, reason).catch(console.error);
         break;
       }
 
@@ -183,6 +214,8 @@ router.post('/:id/action', async (req, res) => {
         addTimeline(order, 'dispatched', '🚚 Order billed and dispatched.', u._id, uName, di);
         await order.save();
         await notify.notifyDispatched(order).catch(console.error);
+        await wa.waDispatched(order).catch(console.error);
+
         order.status = 'completed';
         addTimeline(order, 'completed', '✅ Order completed. Client notified.', u._id, uName);
         break;
@@ -195,12 +228,17 @@ router.post('/:id/action', async (req, res) => {
     await order.save();
     const final = await Order.findById(order._id).populate(BASE_POPULATE).lean();
     res.json({ ...final, id: final._id, partner_name: final.partner_id?.name });
-  } catch (e) { console.error('Action error:', e); res.status(500).json({ error: 'Action failed: ' + e.message }); }
+  } catch (e) {
+    console.error('Action error:', e);
+    res.status(500).json({ error: 'Action failed: ' + e.message });
+  }
 });
-router.delete('/:id', auth, async (req, res) => {
+
+router.delete('/:id', async (req, res) => {
   try {
     await Order.findOneAndDelete({ _id: req.params.id, company_id: req.user.company_id });
     res.json({ message: 'Order deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 module.exports = router;

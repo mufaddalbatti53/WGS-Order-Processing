@@ -7,8 +7,7 @@ const { connectDB } = require('./db/index');
 const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
-
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));   // 50 mb for restore uploads
 
 // Connect to MongoDB before handling API requests
 app.use('/api', async (req, res, next) => {
@@ -16,13 +15,16 @@ app.use('/api', async (req, res, next) => {
   catch (e) { res.status(503).json({ error: 'Database connection failed: ' + e.message }); }
 });
 
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'WGS Order Processing API', time: new Date().toISOString(), db: 'MongoDB' }));
+app.get('/health', (req, res) =>
+  res.json({ status: 'ok', app: 'WGS Order Processing API', time: new Date().toISOString(), db: 'MongoDB' })
+);
 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/clients', require('./routes/clients'));
-app.use('/api/users', require('./routes/users'));
+app.use('/api/auth',          require('./routes/auth'));
+app.use('/api/orders',        require('./routes/orders'));
+app.use('/api/clients',       require('./routes/clients'));
+app.use('/api/users',         require('./routes/users'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/backup',        require('./routes/backup'));   // ← NEW
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
@@ -32,7 +34,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-app.use((err, req, res, next) => { console.error(err.message); res.status(500).json({ error: err.message }); });
+app.use((err, req, res, next) => {
+  console.error(err.message);
+  res.status(500).json({ error: err.message });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {

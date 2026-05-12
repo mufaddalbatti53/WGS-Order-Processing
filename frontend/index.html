@@ -2566,6 +2566,9 @@
         <div class="nav-item admin-only" data-p="notif-log" onclick="go('notif-log')">
           <span class="nav-icon">🔔</span> Notifications
         </div>
+        <div class="nav-item admin-only" data-p="backup" onclick="go('backup')">
+          <span class="nav-icon">💾</span> Backup & Restore
+        </div>
       </nav>
 
       <div class="sb-footer">
@@ -2933,6 +2936,83 @@
                 <tbody id="notifTbody"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <div class="page" id="pg-backup">
+          <!-- Stats row -->
+          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px" id="backupStats"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+
+            <!-- Download to device -->
+            <div class="card" style="padding:28px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <span style="font-size:32px">📥</span>
+                <div>
+                  <div style="font-weight:700;font-size:16px;color:var(--text)">Download Backup</div>
+                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Save a full JSON backup to your device</div>
+                </div>
+              </div>
+              <p style="font-size:13.5px;color:var(--text3);margin:0 0 20px">Includes all staff, clients, orders and notification logs. Download and keep a local copy anytime.</p>
+              <button class="btn btn-primary" style="width:100%" onclick="downloadBackup()" id="btnDownload">
+                📥 Download to Device
+              </button>
+            </div>
+
+            <!-- Upload to Google Drive -->
+            <div class="card" style="padding:28px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <span style="font-size:32px">☁️</span>
+                <div>
+                  <div style="font-weight:700;font-size:16px;color:var(--text)">Google Drive Backup</div>
+                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Push backup directly to your Drive folder</div>
+                </div>
+              </div>
+              <div id="driveStatus" style="font-size:13px;color:var(--text3);margin-bottom:16px">Checking Drive configuration…</div>
+              <button class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#1a73e8,#0d62d1)" onclick="driveBackup()" id="btnDrive">
+                ☁️ Upload to Google Drive
+              </button>
+              <div id="driveResult" style="margin-top:14px;display:none"></div>
+            </div>
+          </div>
+
+          <!-- Restore -->
+          <div class="card" style="padding:28px;margin-bottom:18px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <span style="font-size:32px">🔄</span>
+              <div>
+                <div style="font-weight:700;font-size:16px;color:var(--text)">Restore from Backup</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:2px">Re-import data from a previously downloaded backup file</div>
+              </div>
+            </div>
+            <div style="background:var(--yellow-t);border:1px solid var(--yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--yellow)">
+              ⚠️ <strong>Safe restore:</strong> Only missing records are imported — existing data is never overwritten or deleted.
+            </div>
+            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+              <label class="btn btn-outline" style="cursor:pointer;margin:0" for="restoreFile">
+                📂 Choose Backup File (.json)
+              </label>
+              <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="previewRestore(this)">
+              <span id="restoreFileName" style="font-size:13px;color:var(--text3)">No file chosen</span>
+              <button class="btn btn-primary" id="btnRestore" style="display:none;background:linear-gradient(135deg,#059669,#047857)" onclick="doRestore()">
+                🔄 Restore Now
+              </button>
+            </div>
+            <div id="restorePreview" style="display:none;margin-top:18px;padding:16px;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border)">
+              <div style="font-weight:600;color:var(--text);margin-bottom:10px">📋 Backup Preview</div>
+              <div id="restorePreviewContent"></div>
+            </div>
+            <div id="restoreResult" style="display:none;margin-top:16px"></div>
+          </div>
+
+          <!-- Backup history log (last Drive uploads from notification log) -->
+          <div class="card">
+            <div class="card-top">
+              <h3>Recent Backup Activity</h3>
+              <button class="btn btn-outline btn-sm" onclick="loadBackupStatus()">↻ Refresh</button>
+            </div>
+            <div id="backupLog" style="padding:20px;text-align:center;color:var(--text4);font-size:14px">Loading…</div>
           </div>
         </div>
 
@@ -3462,12 +3542,13 @@
       document.getElementById(`pg-${page}`)?.classList.add('show');
       document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
 
-      const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications' };
+      const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications', backup: 'Backup & Restore' };
       if (document.getElementById('topTitle')) document.getElementById('topTitle').textContent = titles[page] || page;
 
       if (page === 'orders') renderOrders();
       if (page === 'clients') renderClients();
       if (page === 'team') renderTeam();
+      if (page === 'backup') loadBackupStatus();
       if (window.innerWidth < 960) closeSidebar();
       window.scrollTo(0, 0);
     }
@@ -3811,6 +3892,205 @@
         // Attach it to the screen
         input.parentElement.appendChild(btn);
       });
+    }
+
+    // ================================================================
+    // BACKUP & RESTORE
+    // ================================================================
+    let _restoreData = null;
+
+    async function loadBackupStatus() {
+      try {
+        const s = await api('GET', '/backup/status');
+
+        // Stats row
+        const statsEl = document.getElementById('backupStats');
+        if (statsEl) {
+          statsEl.innerHTML = [
+            { l: 'Staff', v: s.data.staff,         cls: 'sc-blue',   i: '👤' },
+            { l: 'Clients', v: s.data.clients,     cls: 'sc-purple', i: '👥' },
+            { l: 'Orders', v: s.data.orders,       cls: 'sc-yellow', i: '📋' },
+            { l: 'Notifications', v: s.data.notifications, cls: 'sc-green', i: '🔔' },
+          ].map(x => `<div class="stat-card ${x.cls}"><div class="sc-icon">${x.i}</div><div class="sc-num">${x.v}</div><div class="sc-lbl">${x.l}</div></div>`).join('');
+        }
+
+        // Drive status chip
+        const ds = document.getElementById('driveStatus');
+        if (ds) {
+          if (s.driveConfigured) {
+            ds.innerHTML = `<span class="badge b-green" style="font-size:13px">✅ Google Drive connected${s.driveFolderSet ? ' · Folder set' : ' · Saving to root'}</span>`;
+          } else {
+            ds.innerHTML = `<span class="badge b-red" style="font-size:13px">❌ Drive not configured — see .env setup</span>`;
+          }
+        }
+
+        // Recent backup log — pull from notif log filtered to type backup (or just show a static tip)
+        const logEl = document.getElementById('backupLog');
+        if (logEl) {
+          const totalRecs = s.data.staff + s.data.clients + s.data.orders + s.data.notifications;
+          logEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:10px;text-align:left">
+              <div style="padding:14px 18px;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border);font-size:13.5px;color:var(--text2)">
+                📊 Current database: <strong>${s.data.staff}</strong> staff · <strong>${s.data.clients}</strong> clients · <strong>${s.data.orders}</strong> orders · <strong>${s.data.notifications}</strong> notification logs
+                <span style="display:inline-block;margin-left:12px;color:var(--text4)">(${totalRecs} total records)</span>
+              </div>
+              <div style="padding:14px 18px;background:var(--sky-pale2);border-radius:10px;border:1px solid var(--sky-pale);font-size:13px;color:var(--text3)">
+                💡 <strong>Tip:</strong> Schedule regular backups — download to device weekly and push to Google Drive daily for best protection.
+              </div>
+            </div>`;
+        }
+      } catch (e) {
+        const logEl = document.getElementById('backupLog');
+        if (logEl) logEl.innerHTML = `<span style="color:var(--red)">Failed to load backup status: ${H(e.message)}</span>`;
+      }
+    }
+
+    async function downloadBackup() {
+      const btn = document.getElementById('btnDownload');
+      btn.disabled = true;
+      btn.textContent = '⏳ Preparing backup…';
+      try {
+        const token = getToken();
+        const slug = COMPANY_SLUG;
+        const res = await fetch(`${API_BASE}/backup/download`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-company-slug': slug,
+          },
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || 'Download failed');
+        }
+        // Get filename from Content-Disposition header or fallback
+        const disp = res.headers.get('Content-Disposition') || '';
+        const match = disp.match(/filename="([^"]+)"/);
+        const filename = match ? match[1] : `wgs-backup-${Date.now()}.json`;
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+        toast(`Backup downloaded: ${filename}`, 'success');
+      } catch (e) {
+        toast('Download failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📥 Download to Device';
+      }
+    }
+
+    async function driveBackup() {
+      const btn = document.getElementById('btnDrive');
+      const resultEl = document.getElementById('driveResult');
+      btn.disabled = true;
+      btn.textContent = '⏳ Uploading…';
+      resultEl.style.display = 'none';
+      try {
+        const res = await api('POST', '/backup/drive');
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `
+          <div style="padding:14px;background:var(--green-t);border:1px solid var(--green-l);border-radius:10px;font-size:13.5px;color:var(--green)">
+            ✅ <strong>Uploaded!</strong> ${H(res.file.name)}<br>
+            <a href="${H(res.file.link)}" target="_blank" style="color:var(--blue-600);font-size:13px;display:inline-block;margin-top:6px">🔗 Open in Google Drive</a>
+            <div style="margin-top:8px;color:var(--text3);font-size:12.5px">
+              ${res.stats.staff} staff · ${res.stats.clients} clients · ${res.stats.orders} orders · ${res.stats.notifications} notifications
+            </div>
+          </div>`;
+        toast('Backup uploaded to Google Drive!', 'success');
+      } catch (e) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div style="padding:12px;background:var(--red-t);border:1px solid var(--red-l);border-radius:10px;font-size:13px;color:var(--red)">❌ ${H(e.message)}</div>`;
+        toast('Drive upload failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '☁️ Upload to Google Drive';
+      }
+    }
+
+    function previewRestore(input) {
+      _restoreData = null;
+      const previewEl = document.getElementById('restorePreview');
+      const previewContent = document.getElementById('restorePreviewContent');
+      const resultEl = document.getElementById('restoreResult');
+      const btnRestore = document.getElementById('btnRestore');
+      const nameEl = document.getElementById('restoreFileName');
+
+      resultEl.style.display = 'none';
+      previewEl.style.display = 'none';
+      btnRestore.style.display = 'none';
+
+      const file = input.files[0];
+      if (!file) { nameEl.textContent = 'No file chosen'; return; }
+      nameEl.textContent = file.name;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.meta || !data.meta.company_id) throw new Error('Invalid backup file — missing metadata');
+          _restoreData = data;
+
+          previewContent.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13.5px">
+              <div><span style="color:var(--text4)">Company:</span> <strong>${H(data.meta.company_name || '—')}</strong></div>
+              <div><span style="color:var(--text4)">Exported:</span> <strong>${new Date(data.meta.exported_at).toLocaleString('en-IN')}</strong></div>
+              <div><span style="color:var(--text4)">Staff:</span> <strong>${(data.staff || []).length} records</strong></div>
+              <div><span style="color:var(--text4)">Clients:</span> <strong>${(data.clients || []).length} records</strong></div>
+              <div><span style="color:var(--text4)">Orders:</span> <strong>${(data.orders || []).length} records</strong></div>
+              <div><span style="color:var(--text4)">Notifications:</span> <strong>${(data.notifications || []).length} records</strong></div>
+            </div>`;
+          previewEl.style.display = 'block';
+          btnRestore.style.display = '';
+        } catch (err) {
+          nameEl.textContent = '❌ Invalid file: ' + err.message;
+          toast('Invalid backup file: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    async function doRestore() {
+      if (!_restoreData) return toast('No backup file loaded', 'error');
+      if (!confirm('Restore from this backup? Missing records will be imported. Existing data will NOT be changed.')) return;
+
+      const btn = document.getElementById('btnRestore');
+      const resultEl = document.getElementById('restoreResult');
+      btn.disabled = true;
+      btn.textContent = '⏳ Restoring…';
+      resultEl.style.display = 'none';
+
+      try {
+        const res = await api('POST', '/backup/restore', _restoreData);
+        resultEl.style.display = 'block';
+        const imp = res.imported;
+        resultEl.innerHTML = `
+          <div style="padding:16px;background:var(--green-t);border:1px solid var(--green-l);border-radius:10px;font-size:13.5px;color:var(--green)">
+            ✅ <strong>Restore complete!</strong><br>
+            <div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;color:var(--text2);font-size:13px">
+              <div style="text-align:center;background:#fff;padding:10px;border-radius:8px;border:1px solid var(--green-l)"><div style="font-size:20px;font-weight:700;color:var(--green)">${imp.staff}</div><div>Staff</div></div>
+              <div style="text-align:center;background:#fff;padding:10px;border-radius:8px;border:1px solid var(--green-l)"><div style="font-size:20px;font-weight:700;color:var(--green)">${imp.clients}</div><div>Clients</div></div>
+              <div style="text-align:center;background:#fff;padding:10px;border-radius:8px;border:1px solid var(--green-l)"><div style="font-size:20px;font-weight:700;color:var(--green)">${imp.orders}</div><div>Orders</div></div>
+              <div style="text-align:center;background:#fff;padding:10px;border-radius:8px;border:1px solid var(--green-l)"><div style="font-size:20px;font-weight:700;color:var(--green)">${imp.notifications}</div><div>Notifs</div></div>
+            </div>
+            <div style="margin-top:10px;font-size:12.5px;color:var(--text3)">${imp.skipped} records already existed and were skipped.</div>
+          </div>`;
+        toast('Restore completed!', 'success');
+        _restoreData = null;
+        document.getElementById('restoreFile').value = '';
+        document.getElementById('restoreFileName').textContent = 'No file chosen';
+        btn.style.display = 'none';
+        document.getElementById('restorePreview').style.display = 'none';
+        loadBackupStatus();
+      } catch (e) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div style="padding:12px;background:var(--red-t);border:1px solid var(--red-l);border-radius:10px;font-size:13px;color:var(--red)">❌ Restore failed: ${H(e.message)}</div>`;
+        toast('Restore failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Restore Now';
+      }
     }
 
     // Run this magic function as soon as the page loads
