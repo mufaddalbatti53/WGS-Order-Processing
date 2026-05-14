@@ -3026,7 +3026,7 @@
     
                 <h4 style="margin-top:0; margin-bottom:16px; color:var(--text);">Manual Controls</h4>
                 <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                  <button class="btn btn-outline" onclick="window.location.href='/api/backup/download?token='+getToken()">⬇️
+                  <button class="btn btn-outline" onclick="window.location.href=API_BASE+'/backup/download?token='+getToken()+'&slug='+COMPANY_SLUG">⬇️
                     Download Local Backup</button>
                   <button class="btn btn-outline" onclick="forceDriveBackup()" id="btnForceDrive" style="display:none;">☁️
                     Force
@@ -3497,7 +3497,6 @@
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        }
         if (!ME) return;
         document.getElementById('proAv').textContent = ME.name[0].toUpperCase();
         document.getElementById('proName').textContent = ME.name;
