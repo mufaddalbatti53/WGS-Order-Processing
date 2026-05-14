@@ -157,5 +157,37 @@ router.post('/restore', async (req, res) => {
     await safeImport(Order, data.orders, 'orders');
     res.json({ message: 'Restore completed', imported: imp });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});// GET /api/backup/download (Local JSON Export)
+router.get('/download', async (req, res) => {
+  try {
+    // 1. Get token and slug from Query Params (not headers)
+    const token = req.query.token;
+    const slug = req.query.slug;
+
+    if (!token || !slug) return res.status(401).json({ error: 'Missing auth parameters' });
+
+    // 2. Find the company based on the slug provided in the URL
+    const company = await Company.findOne({ slug });
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    // 3. Fetch all data for this company
+    const cid = company._id;
+    const backupData = {
+      meta: { company_name: company.name, exported_at: new Date().toISOString() },
+      staff: await User.find({ company_id: cid }).select('-password').lean(),
+      clients: await Client.find({ company_id: cid }).lean(),
+      orders: await Order.find({ company_id: cid }).lean(),
+      products: await Product.find({ company_id: cid }).lean(),
+      notifications: await Notification.find({ company_id: cid }).lean()
+    };
+
+    // 4. Send as file
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=WGS_Backup_${slug}_${new Date().toISOString().split('T')[0]}.json`);
+    res.send(JSON.stringify(backupData, null, 2));
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 module.exports = router;
