@@ -39,7 +39,7 @@ app.use((err, req, res, next) => {
   console.error(err.message);
   res.status(500).json({ error: err.message });
 });
-// Initialize Automated Daily Backups
+
 const { initAutoBackup } = require('./services/autoBackup');
 initAutoBackup();
 const PORT = process.env.PORT || 5000;
