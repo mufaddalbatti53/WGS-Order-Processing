@@ -1,225 +1,162 @@
-// routes/backup.js — Backup & Restore (admin only)
-// Backup: download JSON to device OR push to Google Drive
-// Restore: upload a JSON backup file to re-import data
-'use strict';
-
+// backend/routes/backup.js
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
+const { Readable } = require('stream');
 const { google } = require('googleapis');
-const { User, Client, Order, Notification, Company } = require('../db/models');
+const { Company, User, Client, Order, Notification, Product } = require('../db/models');
 const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
-router.use(auth, adminOnly);
 
-// ── Google Drive client (service-account based) ────────────
-function getDriveClient() {
-  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE;
-  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
+// Apply authentication & ensure only Admins can run backups
+router.use(auth);
+router.use(adminOnly);
 
-  if (!keyFile && !keyJson) return null;
-
-  const authClient = keyJson
-    ? new google.auth.GoogleAuth({
-        credentials: JSON.parse(keyJson),
-        scopes: ['https://www.googleapis.com/auth/drive.file'],
-      })
-    : new google.auth.GoogleAuth({
-        keyFile,
-        scopes: ['https://www.googleapis.com/auth/drive.file'],
-      });
-
-  return google.drive({ version: 'v3', auth: authClient });
-}
-
-// ── Helper: build backup payload ───────────────────────────
-async function buildBackup(companyId) {
-  const [staff, clients, orders, notifications, company] = await Promise.all([
-    User.find({ company_id: companyId }).select('-password').lean(),
-    Client.find({ company_id: companyId }).lean(),
-    Order.find({ company_id: companyId }).lean(),
-    Notification.find({ company_id: companyId }).lean(),
-    Company.findById(companyId).lean(),
-  ]);
+// 1. Helper: Fetch all company data
+async function fetchAllData(companyId) {
+  const company = await Company.findById(companyId).lean();
+  const staff = await User.find({ company_id: companyId }).lean();
+  const clients = await Client.find({ company_id: companyId }).lean();
+  const orders = await Order.find({ company_id: companyId }).lean();
+  const products = await Product.find({ company_id: companyId }).lean(); // Included the new products
+  const notifications = await Notification.find({ company_id: companyId }).lean();
 
   return {
     meta: {
-      app: 'WGS Order Processing',
-      version: '1.0',
+      company_id: company._id,
+      company_name: company.name,
+      company_slug: company.slug,
       exported_at: new Date().toISOString(),
-      company_id: String(companyId),
-      company_name: company?.name || '',
+      version: '1.0'
     },
-    company,
-    staff,
-    clients,
-    orders,
-    notifications,
+    staff, clients, orders, products, notifications
   };
 }
 
-// ══════════════════════════════════════════════════════════
-// GET /api/backup/download
-// Returns the JSON file as a download attachment
-// ══════════════════════════════════════════════════════════
-router.get('/download', async (req, res) => {
+// 2. GET /api/backup/status
+router.get('/status', async (req, res) => {
   try {
-    const data = await buildBackup(req.company_id);
-    const filename = `wgs-backup-${data.meta.company_name.replace(/\s+/g, '_')}-${Date.now()}.json`;
+    const staff = await User.countDocuments({ company_id: req.company_id });
+    const clients = await Client.countDocuments({ company_id: req.company_id });
+    const orders = await Order.countDocuments({ company_id: req.company_id });
+    const notifications = await Notification.countDocuments({ company_id: req.company_id });
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(JSON.stringify(data, null, 2));
+    // Check if the service-account.json exists and Drive is ready
+    let driveConfigured = false;
+    try {
+      const fs = require('fs');
+      driveConfigured = fs.existsSync(path.join(__dirname, '..', 'service-account.json'));
+    } catch (e) { }
+
+    res.json({
+      data: { staff, clients, orders, notifications },
+      driveConfigured,
+      driveFolderSet: !!process.env.GOOGLE_DRIVE_FOLDER_ID
+    });
   } catch (e) {
-    console.error('[BACKUP] Download error:', e.message);
-    res.status(500).json({ error: 'Backup failed: ' + e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 
-// ══════════════════════════════════════════════════════════
-// POST /api/backup/drive
-// Uploads the backup JSON to Google Drive
-// ══════════════════════════════════════════════════════════
+// 3. GET /api/backup/download (Local Download)
+router.get('/download', async (req, res) => {
+  try {
+    const backupData = await fetchAllData(req.company_id);
+    const filename = `wgs-backup-${backupData.meta.company_slug}-${Date.now()}.json`;
+
+    res.setHeader('Content-disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-type', 'application/json');
+    res.send(JSON.stringify(backupData, null, 2));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4. POST /api/backup/drive (Google Drive Upload)
 router.post('/drive', async (req, res) => {
   try {
-    const drive = getDriveClient();
-    if (!drive) {
-      return res.status(503).json({
-        error: 'Google Drive not configured. Set GOOGLE_SERVICE_ACCOUNT_KEY_FILE or GOOGLE_SERVICE_ACCOUNT_KEY_JSON in .env',
-      });
-    }
+    const backupData = await fetchAllData(req.company_id);
 
-    const data = await buildBackup(req.company_id);
-    const filename = `wgs-backup-${data.meta.company_name.replace(/\s+/g, '_')}-${Date.now()}.json`;
-    const tmpPath = path.join('/tmp', filename);
-    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+    // Authenticate with Google using the service account file
+    const gAuth = new google.auth.GoogleAuth({
+      keyFile: path.join(__dirname, '..', 'service-account.json'),
+      scopes: ['https://www.googleapis.com/auth/drive.file']
+    });
+    const drive = google.drive({ version: 'v3', auth: gAuth });
 
-    // Optionally place inside a specific Drive folder
-    const folderId = process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID;
-    const requestBody = { name: filename, mimeType: 'application/json' };
-    if (folderId) requestBody.parents = [folderId];
+    // Convert JSON to a readable stream for Google Drive
+    const buffer = Buffer.from(JSON.stringify(backupData, null, 2));
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const filename = `WGS_Orders_Backup_${backupData.meta.company_slug}_${new Date().toISOString().split('T')[0]}.json`;
 
     const driveRes = await drive.files.create({
-      requestBody,
-      media: { mimeType: 'application/json', body: fs.createReadStream(tmpPath) },
-      fields: 'id,name,webViewLink',
+      requestBody: {
+        name: filename,
+        parents: folderId ? [folderId] : []
+      },
+      media: {
+        mimeType: 'application/json',
+        body: stream
+      },
+      fields: 'id, name, webViewLink'
     });
 
-    fs.unlinkSync(tmpPath);
-
     res.json({
-      success: true,
-      message: `Backup uploaded to Google Drive`,
       file: {
         id: driveRes.data.id,
         name: driveRes.data.name,
-        link: driveRes.data.webViewLink,
+        link: driveRes.data.webViewLink
       },
       stats: {
-        staff: data.staff.length,
-        clients: data.clients.length,
-        orders: data.orders.length,
-        notifications: data.notifications.length,
-      },
+        staff: backupData.staff.length,
+        clients: backupData.clients.length,
+        orders: backupData.orders.length,
+        products: backupData.products.length,
+        notifications: backupData.notifications.length
+      }
     });
   } catch (e) {
-    console.error('[BACKUP] Drive error:', e.message);
-    res.status(500).json({ error: 'Drive upload failed: ' + e.message });
+    console.error('Drive Upload Error:', e);
+    res.status(500).json({ error: 'Failed to upload to Google Drive. Check service-account.json and permissions.' });
   }
 });
 
-// ══════════════════════════════════════════════════════════
-// GET /api/backup/status
-// Returns Drive config status + backup stats
-// ══════════════════════════════════════════════════════════
-router.get('/status', async (req, res) => {
-  try {
-    const [staffCount, clientCount, orderCount, notifCount] = await Promise.all([
-      User.countDocuments({ company_id: req.company_id }),
-      Client.countDocuments({ company_id: req.company_id }),
-      Order.countDocuments({ company_id: req.company_id }),
-      Notification.countDocuments({ company_id: req.company_id }),
-    ]);
-
-    res.json({
-      driveConfigured: !!(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON),
-      driveFolderSet: !!process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID,
-      data: { staff: staffCount, clients: clientCount, orders: orderCount, notifications: notifCount },
-    });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ══════════════════════════════════════════════════════════
-// POST /api/backup/restore
-// Accepts a JSON backup and re-imports missing records
-// (safe: skips duplicates, never overwrites existing data)
-// ══════════════════════════════════════════════════════════
+// 5. POST /api/backup/restore (Safe Import)
 router.post('/restore', async (req, res) => {
   try {
-    const backup = req.body;
-    if (!backup?.meta || !backup.meta.company_id) {
-      return res.status(400).json({ error: 'Invalid backup file. Missing meta.company_id.' });
-    }
+    const data = req.body;
+    if (!data || !data.meta) return res.status(400).json({ error: 'Invalid backup file format' });
 
-    // Security: only restore into the authenticated manager's own company
-    if (String(backup.meta.company_id) !== String(req.company_id)) {
-      return res.status(403).json({ error: 'Backup belongs to a different company. Restore denied.' });
-    }
+    const imp = { staff: 0, clients: 0, orders: 0, products: 0, notifications: 0, skipped: 0 };
 
-    const result = { staff: 0, clients: 0, orders: 0, notifications: 0, skipped: 0 };
-
-    // Restore clients (skip existing by _id)
-    for (const c of (backup.clients || [])) {
-      try {
-        const exists = await Client.findById(c._id);
+    // Safe import function: Only inserts if ID doesn't exist to prevent overwriting current data
+    const safeImport = async (Model, items, category) => {
+      if (!items || !Array.isArray(items)) return;
+      for (const item of items) {
+        // Security check: ensure restored data is bound to current company
+        item.company_id = req.company_id;
+        const exists = await Model.exists({ _id: item._id });
         if (!exists) {
-          await Client.create({ ...c, _id: c._id, company_id: req.company_id });
-          result.clients++;
-        } else { result.skipped++; }
-      } catch { result.skipped++; }
-    }
+          await Model.create(item);
+          imp[category]++;
+        } else {
+          imp.skipped++;
+        }
+      }
+    };
 
-    // Restore orders (skip existing by _id)
-    for (const o of (backup.orders || [])) {
-      try {
-        const exists = await Order.findById(o._id);
-        if (!exists) {
-          await Order.create({ ...o, _id: o._id, company_id: req.company_id });
-          result.orders++;
-        } else { result.skipped++; }
-      } catch { result.skipped++; }
-    }
+    await safeImport(User, data.staff, 'staff');
+    await safeImport(Client, data.clients, 'clients');
+    await safeImport(Order, data.orders, 'orders');
+    await safeImport(Product, data.products, 'products');
+    await safeImport(Notification, data.notifications, 'notifications');
 
-    // Restore staff (skip existing by _id, never overwrite passwords)
-    for (const u of (backup.staff || [])) {
-      try {
-        const exists = await User.findById(u._id);
-        if (!exists) {
-          await User.create({ ...u, _id: u._id, company_id: req.company_id });
-          result.staff++;
-        } else { result.skipped++; }
-      } catch { result.skipped++; }
-    }
-
-    // Restore notifications (skip existing)
-    for (const n of (backup.notifications || [])) {
-      try {
-        const exists = await Notification.findById(n._id);
-        if (!exists) {
-          await Notification.create({ ...n, _id: n._id, company_id: req.company_id });
-          result.notifications++;
-        } else { result.skipped++; }
-      } catch { result.skipped++; }
-    }
-
-    res.json({
-      success: true,
-      message: 'Restore completed successfully.',
-      imported: result,
-    });
+    res.json({ message: 'Restore successfully completed', imported: imp });
   } catch (e) {
-    console.error('[RESTORE] Error:', e.message);
-    res.status(500).json({ error: 'Restore failed: ' + e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 

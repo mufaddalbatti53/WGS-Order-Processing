@@ -2538,12 +2538,17 @@
               style="width:100%;height:100%;object-fit:contain;border-radius:8px;padding:3px"></div>
           <span class="sb-brand-name">WGS</span>
         </div>
-        <div class="sb-user-chip">
+        <div class="sb-user-chip" onclick="openProfile()" style="cursor:pointer; transition:background 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.25)'"
+          onmouseout="this.style.background='rgba(255,255,255,0.15)'">
           <div class="sb-avatar" id="sbAv">A</div>
           <div>
             <div class="sb-user-name" id="sbNm">Arjun Sharma</div>
             <div id="sbCo" style="font-size:11px;color:var(--text4);margin-top:1px">WGS Order Processing</div>
-            <div class="sb-user-role" id="sbRl">Team A Manager</div>
+            <div id="sbSlug"
+              style="font-size:10px;color:var(--sky-xl);font-family:'JetBrains Mono',monospace;margin-top:1px;letter-spacing:0.5px">
+            </div>
+            <div class="sb-user-role" id="sbRl" style="margin-top:2px">Team A Manager</div>
           </div>
         </div>
       </div>
@@ -3328,7 +3333,38 @@
       </div>
     </div>
   </div>
-  
+  <div class="overlay" id="profileM" onclick="if(event.target===this)closeM('profileM')">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-hd">
+        <h3>👤 My Profile</h3>
+        <button class="modal-close" onclick="closeM('profileM')">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div style="text-align:center;margin-bottom:20px">
+          <div id="proAv"
+            style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--sky-d),var(--blue-700));color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:var(--shadow-md)">
+            A</div>
+          <div id="proName" style="font-size:20px;font-weight:800;color:var(--text)">Name</div>
+          <div id="proRole" style="margin-top:6px">Role</div>
+        </div>
+        <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0">
+          <div class="dr-lbl">Email Address</div>
+          <div class="dr-val" id="proEmail"></div>
+        </div>
+        <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0">
+          <div class="dr-lbl">Company</div>
+          <div class="dr-val" id="proCo"></div>
+        </div>
+        <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0;border-bottom:none">
+          <div class="dr-lbl">Workspace Slug</div>
+          <div class="dr-val mono" id="proSlug" style="font-size:14px"></div>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn btn-outline" style="width:100%" onclick="closeM('profileM')">Close</button>
+      </div>
+    </div>
+  </div>
   <div class="toast-wrap" id="toastWrap"></div>
   
   <script>
@@ -3434,17 +3470,33 @@
     }
   }
     function toast(msg, type = 'info') {
-      const c = document.getElementById('toastWrap');
-      const el = document.createElement('div');
-      el.className = `toast toast-${type}`;
-      el.innerHTML = `<span>${{ success: '✅', error: '❌', info: 'ℹ️' }[type] || 'ℹ️'}</span><span>${msg}</span>`;
-      c.appendChild(el);
-      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(24px)'; setTimeout(() => el.remove(), 400); }, 3500);
-    }
+        const c = document.getElementById('toastWrap');
+        const el = document.createElement('div');
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `<span>${{ success: '✅', error: '❌', info: 'ℹ️' }[type] || 'ℹ️'}</span><span>${msg}</span>`;
+        c.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(24px)'; setTimeout(() => el.remove(), 400); }, 10000);
+      }
 
     function openM(id) { document.getElementById(id).classList.add('show'); }
     function closeM(id) { document.getElementById(id).classList.remove('show'); }
-    function authAlert(msg, type = 'error') { const el = document.getElementById('authAlert'); el.className = `alert alert-${type} mb-16`; el.textContent = msg; el.style.display = 'flex'; setTimeout(() => el.style.display = 'none', 5000); }
+    function openProfile() {
+        if (!ME) return;
+        document.getElementById('proAv').textContent = ME.name[0].toUpperCase();
+        document.getElementById('proName').textContent = ME.name;
+        document.getElementById('proRole').innerHTML = `<span class="badge ${roleColor(ME.role)}">${roleLabel(ME.role)}</span>`;
+        document.getElementById('proEmail').textContent = ME.email;
+        document.getElementById('proCo').textContent = localStorage.getItem('of_company_name') || ME.company_name || 'N/A';
+        document.getElementById('proSlug').textContent = COMPANY_SLUG;
+        openM('profileM');
+      }
+    function authAlert(msg, type = 'error') {
+        const el = document.getElementById('authAlert');
+        el.className = `alert alert-${type} mb-16`;
+        el.textContent = msg;
+        el.style.display = 'flex';
+        setTimeout(() => el.style.display = 'none', 10000);
+      }
     function setBtnLoading(id, loading, label) { const b = document.getElementById(id); if (b) { b.disabled = loading; b.textContent = loading ? '⏳ Please wait...' : label; } }
 
     function switchTab(tab) {
@@ -3458,7 +3510,73 @@
       });
       document.getElementById('authAlert').style.display = 'none';
     }
+  // ================================================================
+  // LIVE UPDATES & POLLING
+  // ================================================================
+  let liveUpdateInterval = null;
 
+  function startLiveUpdates() {
+    // Clear any existing interval to avoid duplicates
+    if (liveUpdateInterval) clearInterval(liveUpdateInterval);
+
+    // Poll every 10 seconds
+    liveUpdateInterval = setInterval(async () => {
+      if (!getToken()) {
+        clearInterval(liveUpdateInterval);
+        return;
+      }
+
+      try {
+        // Quietly fetch all data
+        const [orders, clients, users, notifs, products] = await Promise.all([
+          api('GET', '/orders'),
+          ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]),
+          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),
+          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] }),
+          api('GET', '/products')
+        ]);
+
+        // Update the global DB
+        DB.orders = orders.map(mapOrder);
+        DB.clients = clients.map(mapClient);
+        DB.users = users.map(mapUser);
+        DB.notifLog = notifs.logs || [];
+        DB.products = products || [];
+
+        // Determine which page the user is currently looking at
+        const activePage = window.location.hash.substring(1) || 'dashboard';
+
+        // Only re-render the view they are currently looking at to prevent lag
+        if (activePage === 'dashboard') {
+          renderDashStats();
+          renderDashRecent();
+        } else if (activePage === 'orders') {
+          renderOrders();
+          // Update badge counts quietly
+          const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
+          const badge = document.getElementById('pendBadge');
+          if (badge) { badge.textContent = pend; badge.style.display = pend > 0 ? '' : 'none'; }
+        } else if (activePage === 'clients') {
+          renderClients();
+        } else if (activePage === 'products') {
+          renderProducts(); // (If you added part 2)
+        } else if (activePage === 'team') {
+          renderTeam();
+        } else if (activePage === 'notif-log') {
+          renderNotifLog();
+        } else if (activePage === 'order-detail' && CUR_ORDER) {
+          // Check if the current order was updated by someone else
+          const updatedOrder = DB.orders.find(o => String(o.id) === String(CUR_ORDER.id));
+          if (updatedOrder && updatedOrder.updated !== CUR_ORDER.updated) {
+            CUR_ORDER = updatedOrder;
+            viewOrder(CUR_ORDER.id); // Refresh the order detail view silently
+          }
+        }
+      } catch (e) {
+        console.warn('Live update sync failed (will retry in 10s):', e);
+      }
+    }, 10000); // 10000 ms = 10 seconds
+  }
     // ================================================================
     // AUTHENTICATION
     // ================================================================
@@ -3613,7 +3731,7 @@
       document.getElementById('sbRl').textContent = roleLabel(ME.role);
       document.getElementById('sbCo').textContent = localStorage.getItem('of_company_name') || ME.company_name || '';
       document.getElementById('topRole').textContent = roleLabel(ME.role);
-
+      document.getElementById('sbSlug').textContent = `@${COMPANY_SLUG}`;
       const hr = new Date().getHours();
       document.getElementById('wbGreet').textContent = `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ME.name.split(' ')[0]} 👋`;
       document.getElementById('wbDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -3658,10 +3776,48 @@
       renderDashStats();
       renderDashRecent();
       renderNotifLog();
-      go('dashboard');
+
+      // Read the URL hash to restore the page (default to dashboard)
+      let hash = window.location.hash.substring(1);
+      // If they refresh on a specific order, bump them back to the orders list 
+      // because the single order ID isn't in the URL to load it properly.
+      let initialPage = hash && document.getElementById(`pg-${hash}`) ? hash : 'dashboard';
+      if (initialPage === 'order-detail') initialPage = 'orders';
+
+      go(initialPage);
+
+      // Start the live background updates
+      startLiveUpdates();
     }
 
     function go(page) {
+        // 1. Update the URL hash quietly so a refresh remembers the page
+        if (window.location.hash !== '#' + page) {
+          window.history.pushState(null, null, '#' + page);
+        }
+
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`pg-${page}`)?.classList.add('show');
+        document.querySelector(`.nav-item[data-p="${page}"]`)?.classList.add('active');
+
+        const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications', backup: 'Backup & Restore', products: 'Products' };
+        if (document.getElementById('topTitle')) document.getElementById('topTitle').textContent = titles[page] || page;
+
+        if (page === 'orders') renderOrders();
+        if (page === 'clients') renderClients();
+        if (page === 'products' && typeof renderProducts === 'function') renderProducts();
+        if (page === 'team') renderTeam();
+        if (page === 'backup') loadBackupStatus();
+        if (window.innerWidth < 960) closeSidebar();
+        window.scrollTo(0, 0);
+      }
+
+      // 2. Listen for the browser back/forward buttons
+      window.addEventListener('popstate', () => {
+        const hash = window.location.hash.substring(1) || 'dashboard';
+        if (document.getElementById(`pg-${hash}`)) go(hash);
+      });
       document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(`pg-${page}`)?.classList.add('show');
@@ -3836,6 +3992,8 @@
         DB.orders.unshift(mapOrder(res));
         ['no_name', 'no_ph', 'no_em', 'no_desc', 'no_amt', 'no_csel'].forEach(id => document.getElementById(id).value = '');
         toast(`Order ${res.order_number} created!`, 'success');
+        if (res.notifMsg) setTimeout(() => toast(res.notifMsg, 'info'), 800);
+
         setupApp();
         viewOrder(res._id);
       } catch (e) { toast(e.message, 'error'); }
@@ -3957,6 +4115,8 @@
         if (idx > -1) DB.orders[idx] = updated;
         closeM('actionM');
         toast('Action completed successfully!', 'success');
+        if (res.notifMsg) setTimeout(() => toast(res.notifMsg, 'info'), 800);
+
         setupApp();
         viewOrder(CUR_ORDER.id);
       } catch (e) { toast(e.message, 'error'); }

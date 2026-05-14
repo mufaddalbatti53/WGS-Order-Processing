@@ -1,8 +1,8 @@
 // routes/orders.js — company-scoped (MongoDB) + WhatsApp at every stage
 const express = require('express');
 const { Order, User, Client } = require('../db/models');
-const notify = require('../services/notify');
-const wa = require('../services/whatsapp');
+const { notifyClientEmail } = require('../services/notify');
+const { notifyClientWA } = require('../services/whatsapp');
 const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
 router.use(auth);
@@ -130,15 +130,17 @@ router.post('/', adminOnly, async (req, res) => {
     });
 
     // Email + WhatsApp notifications
-    notify.notifyOrderReceived(order, req.company_id).catch(console.error);
-    wa.waOrderReceived(order).catch(console.error);
-
-    if (initialStatus === 'credit_rejected') {
-      notify.notifyCreditRejected(order).catch(console.error);
-      wa.waCreditRejected(order).catch(console.error);
+    // ONLY send client notifications
+    let notifMsg = '';
+    if (initialStatus === 'received') {
+      const eRes = await notifyClientEmail(order, 'received');
+      const wRes = await notifyClientWA(order, 'received');
+      if (eRes) notifMsg += eRes + '. ';
+      if (wRes) notifMsg += wRes + '.';
     }
 
-    res.status(201).json({ ...order.toObject(), id: order._id });
+    res.status(201).json({ ...order.toObject(), id: order._id, notifMsg: notifMsg.trim() });
+
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -150,24 +152,20 @@ router.post('/:id/action', async (req, res) => {
     const { actionKey, notes, partnerId, qcFailReason, rejReason, billingAmount, dispatchInfo } = req.body;
     const u = req.user, uName = u.name;
 
-    switch (actionKey) {
+    let notifMsg = ''; // To collect notification logs
 
+    switch (actionKey) {
       case 'approve_credit':
         if (u.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         order.status = 'credit_check';
         addTimeline(order, 'credit_check', '✅ Credit approved. Ready to assign partner.', u._id, uName, notes);
-        await order.save();
-        wa.waCreditApproved(order).catch(console.error);
         break;
 
       case 'reject_credit': {
         if (u.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const r = rejReason || notes || 'Pending payment issues.';
         order.status = 'credit_rejected'; order.rej_reason = r;
-        addTimeline(order, 'credit_rejected', '❌ Credit rejected. Client notified.', u._id, uName, r, true);
-        await order.save();
-        notify.notifyCreditRejected(order).catch(console.error);
-        wa.waCreditRejected(order).catch(console.error);
+        addTimeline(order, 'credit_rejected', '❌ Credit rejected.', u._id, uName, r, true);
         break;
       }
 
@@ -178,9 +176,6 @@ router.post('/:id/action', async (req, res) => {
         if (!p) return res.status(400).json({ error: 'Partner not found' });
         order.status = 'assigned'; order.partner_id = p._id;
         addTimeline(order, 'assigned', `👷 Assigned to ${p.name}.`, u._id, uName, notes ? `Instructions: ${notes}` : null);
-        await order.save();
-        notify.notifyPartnerAssigned(order, p).catch(console.error);
-        wa.waPartnerAssigned(order, p).catch(console.error);
         break;
       }
 
@@ -189,8 +184,12 @@ router.post('/:id/action', async (req, res) => {
         if (u.role === 'partner' && String(order.partner_id) !== String(u._id)) return res.status(403).json({ error: 'Not your order' });
         order.status = 'in_production';
         addTimeline(order, 'in_production', '⚙️ Production started.', u._id, uName, notes);
-        await order.save();
-        wa.waProductionStarted(order).catch(console.error);
+
+        // Notify Client
+        const p_eRes = await notifyClientEmail(order, 'production');
+        const p_wRes = await notifyClientWA(order, 'production');
+        if (p_eRes) notifMsg += p_eRes + '. ';
+        if (p_wRes) notifMsg += p_wRes + '.';
         break;
 
       case 'goods_received':
@@ -199,25 +198,24 @@ router.post('/:id/action', async (req, res) => {
         if (u.role === 'partner' && String(order.partner_id) !== String(u._id)) return res.status(403).json({ error: 'Not your order' });
         order.status = 'goods_received';
         addTimeline(order, 'goods_received', '📦 Production complete. Goods returned to Team A.', u._id, uName, notes);
-        await order.save();
-        notify.notifyGoodsReceived(order, req.company_id).catch(console.error);
-        wa.waGoodsReceived(order).catch(console.error);
         break;
 
       case 'start_qc':
         if (!['admin', 'quality'].includes(u.role)) return res.status(403).json({ error: 'Not allowed' });
         order.status = 'quality_check';
         addTimeline(order, 'quality_check', '🔍 Quality check in progress.', u._id, uName, notes);
-        // No client WA for internal QC start — just move status
+
+        // Notify Client
+        const q_eRes = await notifyClientEmail(order, 'qc');
+        const q_wRes = await notifyClientWA(order, 'qc');
+        if (q_eRes) notifMsg += q_eRes + '. ';
+        if (q_wRes) notifMsg += q_wRes + '.';
         break;
 
       case 'qc_pass':
         if (!['admin', 'quality'].includes(u.role)) return res.status(403).json({ error: 'Not allowed' });
         order.status = 'billing'; order.quality_notes = notes || 'Passed quality inspection.';
         addTimeline(order, 'billing', '✅ QC passed. Sent to billing.', u._id, uName, notes);
-        await order.save();
-        notify.notifyQCPassed(order, req.company_id).catch(console.error);
-        wa.waQCPassed(order).catch(console.error);
         break;
 
       case 'qc_fail': {
@@ -225,12 +223,6 @@ router.post('/:id/action', async (req, res) => {
         const reason = qcFailReason || notes || 'Quality not met.';
         order.status = 'quality_failed'; order.quality_notes = reason;
         addTimeline(order, 'quality_failed', '❌ QC FAILED. Returned to partner.', u._id, uName, reason, true);
-        if (order.partner_id) {
-          const p2 = await User.findById(order.partner_id);
-          if (p2) notify.notifyQCFailed(order, p2, reason).catch(console.error);
-        }
-        await order.save();
-        wa.waQCFailed(order, reason).catch(console.error);
         break;
       }
 
@@ -241,9 +233,12 @@ router.post('/:id/action', async (req, res) => {
         const di = dispatchInfo || notes || 'Order dispatched.';
         order.status = 'dispatched'; order.amount = fa; order.dispatch_info = di; order.billing_notes = notes || '';
         addTimeline(order, 'dispatched', '🚚 Order billed and dispatched.', u._id, uName, di);
-        await order.save();
-        await notify.notifyDispatched(order).catch(console.error);
-        await wa.waDispatched(order).catch(console.error);
+
+        // Notify Client with full details
+        const d_eRes = await notifyClientEmail(order, 'dispatched', di);
+        const d_wRes = await notifyClientWA(order, 'dispatched', di);
+        if (d_eRes) notifMsg += d_eRes + '. ';
+        if (d_wRes) notifMsg += d_wRes + '.';
 
         order.status = 'completed';
         addTimeline(order, 'completed', '✅ Order completed. Client notified.', u._id, uName);
@@ -256,7 +251,7 @@ router.post('/:id/action', async (req, res) => {
 
     await order.save();
     const final = await Order.findById(order._id).populate(BASE_POPULATE).lean();
-    res.json({ ...final, id: final._id, partner_name: final.partner_id?.name });
+    res.json({ ...final, id: final._id, partner_name: final.partner_id?.name, notifMsg: notifMsg.trim() });
   } catch (e) {
     console.error('Action error:', e);
     res.status(500).json({ error: 'Action failed: ' + e.message });
