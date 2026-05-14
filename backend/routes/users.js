@@ -4,18 +4,11 @@ const bcrypt = require('bcryptjs');
 const { User } = require('../db/models');
 const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
+
+// Apply auth and admin-only middleware to all user routes
 router.use(auth, adminOnly);
 
-const fs = require('fs');
-const { google } = require('googleapis');
-const { User, Client, Order, Notification } = require('../db/models');
-
-// Google Drive setup
-const drive = google.drive({ version: 'v3', auth: new google.auth.GoogleAuth({
-  keyFile: 'path/to/credentials.json',
-  scopes: ['https://www.googleapis.com/auth/drive.file'],
-}) });
-
+// GET all users
 router.get('/', async (req, res) => {
   try {
     const users = await User.find({ company_id: req.company_id }).select('-password').sort({ role: 1, name: 1 }).lean();
@@ -23,6 +16,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// POST new user
 router.post('/', async (req, res) => {
   try {
     const { name, email, password, role, phone } = req.body;
@@ -43,31 +37,7 @@ router.post('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/backup', async (req, res) => {
-  try {
-    // Fetch data
-    const staff = await User.find({ company_id: req.company_id }).lean();
-    const clients = await Client.find({ company_id: req.company_id }).lean();
-    const orders = await Order.find({ company_id: req.company_id }).lean();
-    const notifications = await Notification.find({ company_id: req.company_id }).lean();
-
-    // Create backup file
-    const backupData = { staff, clients, orders, notifications };
-    const backupFile = `backup-${Date.now()}.json`;
-    fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
-
-    // Upload to Google Drive
-    const driveResponse = await drive.files.create({
-      requestBody: { name: backupFile, mimeType: 'application/json' },
-      media: { mimeType: 'application/json', body: fs.createReadStream(backupFile) },
-    });
-
-    res.json({ message: 'Backup successful', driveFileId: driveResponse.data.id });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
+// PUT edit user
 router.put('/:id', async (req, res) => {
   try {
     const u = await User.findOne({ _id: req.params.id, company_id: req.company_id });
@@ -77,6 +47,7 @@ router.put('/:id', async (req, res) => {
     if (!['admin', 'partner', 'quality', 'billing'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
     const dup = await User.findOne({ company_id: req.company_id, email: email.trim().toLowerCase(), _id: { $ne: u._id } });
     if (dup) return res.status(400).json({ error: 'Email already exists in this company' });
+
     u.name = name.trim();
     u.email = email.trim().toLowerCase();
     u.phone = phone || '';
@@ -90,6 +61,7 @@ router.put('/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// PATCH toggle user status
 router.patch('/:id/toggle', async (req, res) => {
   try {
     const u = await User.findOne({ _id: req.params.id, company_id: req.company_id });
@@ -101,6 +73,7 @@ router.patch('/:id/toggle', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// DELETE user
 router.delete('/:id', async (req, res) => {
   try {
     const u = await User.findOne({ _id: req.params.id, company_id: req.company_id });
