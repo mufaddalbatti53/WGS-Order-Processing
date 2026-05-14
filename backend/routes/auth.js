@@ -319,5 +319,28 @@ router.post('/change-password', auth, async (req, res) => {
     res.json({ message: 'Password changed successfully' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+// PUT /api/auth/me (Update own profile)
+router.put('/me', auth, async (req, res) => {
+  try {
+    const { name, phone, password } = req.body;
+    const u = await User.findById(req.user._id);
+    if (!u) return res.status(404).json({ error: 'User not found' });
 
+    if (name) u.name = name.trim();
+    if (phone !== undefined) u.phone = phone.trim();
+
+    if (password && password.length >= 6) {
+      const bcrypt = require('bcryptjs');
+      u.password = bcrypt.hashSync(password, 10);
+    }
+
+    await u.save();
+
+    // Return the safe user object without the password
+    const safeUser = await User.findById(u._id).select('-password').lean();
+    res.json(safeUser);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 module.exports = router;

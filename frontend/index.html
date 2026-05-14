@@ -715,7 +715,38 @@
       font-weight: 700;
       color: var(--text);
     }
+/* =============================================================
+       CARD BODY & SPACING FIX
+       ============================================================= */
+    .card-body {
+      padding: clamp(16px, 5vw, 24px) !important; /* Responsive padding */
+      display: flex;
+      flex-direction: column;
+      gap: 20px; /* Spacing between sections inside the body */
+    }
 
+    /* Fix for the internal boxes inside the card-body */
+    #driveStatusBox, #driveConfigBox {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      width: 100% !important;
+      padding: 20px !important;
+      box-sizing: border-box;
+    }
+
+    /* Mobile specific adjustment for card-body */
+    @media (max-width: 768px) {
+      .card-body {
+        padding: 16px !important;
+      }
+      
+      .card-body hr {
+        margin: 16px -16px !important; /* Makes lines go edge-to-edge if needed */
+        width: calc(100% + 32px);
+        border: 0;
+        border-top: 1px solid var(--border3);
+      }
+    }
     /* =============================================================
    STATS
    ============================================================= */
@@ -3249,9 +3280,9 @@
       </div>
     </div>
     <div class="overlay" id="profileM" onclick="if(event.target===this)closeM('profileM')">
-      <div class="modal" style="max-width:400px">
+      <div class="modal" style="max-width:420px">
         <div class="modal-hd">
-          <h3>👤 My Profile</h3>
+          <h3>👤 Edit Profile</h3>
           <button class="modal-close" onclick="closeM('profileM')">✕</button>
         </div>
         <div class="modal-bd">
@@ -3259,24 +3290,48 @@
             <div id="proAv"
               style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--sky-d),var(--blue-700));color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:var(--shadow-md)">
               A</div>
-            <div id="proName" style="font-size:20px;font-weight:800;color:var(--text)">Name</div>
-            <div id="proRole" style="margin-top:6px">Role</div>
+            <div id="proRole" style="margin-top:6px"></div>
           </div>
-          <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0">
-            <div class="dr-lbl">Email Address</div>
-            <div class="dr-val" id="proEmail"></div>
+    
+          <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="proNameInput">
           </div>
-          <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0">
-            <div class="dr-lbl">Company</div>
-            <div class="dr-val" id="proCo"></div>
+    
+          <div class="field">
+            <label>Phone Number</label>
+            <input type="tel" id="proPhoneInput" placeholder="+91 98765 43210">
           </div>
-          <div class="dr" style="grid-template-columns:110px 1fr;padding:14px 0;border-bottom:none">
-            <div class="dr-lbl">Workspace Slug</div>
-            <div class="dr-val mono" id="proSlug" style="font-size:14px"></div>
+    
+          <div class="field">
+            <label>Email Address <span style="font-weight:400;color:var(--text4)">(Login ID cannot be
+                changed)</span></label>
+            <input type="email" id="proEmailInput" disabled
+              style="background:var(--bg-page); color:var(--text3); cursor:not-allowed;">
+          </div>
+    
+          <hr style="border-top:1px solid var(--border3); margin:20px 0;">
+    
+          <div class="field">
+            <label>Change Password <span style="font-weight:400;color:var(--text4)">(Leave blank to keep
+                current)</span></label>
+            <input type="password" id="proPassInput" placeholder="Enter new password (min 6 chars)">
+          </div>
+    
+          <div
+            style="background:var(--bg-panel); border:1px solid var(--border); border-radius:8px; padding:14px; margin-top:24px;">
+            <div
+              style="font-size:11.5px; color:var(--text3); display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span>Company:</span> <strong id="proCoDisplay" style="color:var(--text)"></strong>
+            </div>
+            <div style="font-size:11.5px; color:var(--text3); display:flex; justify-content:space-between;">
+              <span>Workspace Slug:</span> <strong id="proSlugDisplay" class="mono"></strong>
+            </div>
           </div>
         </div>
-        <div class="modal-ft">
-          <button class="btn btn-outline" style="width:100%" onclick="closeM('profileM')">Close</button>
+        <div class="modal-ft" style="justify-content:space-between">
+          <button class="btn btn-outline" onclick="closeM('profileM')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveProfile()">💾 Save Changes</button>
         </div>
       </div>
     </div>
@@ -3396,6 +3451,53 @@
       function closeM(id) { document.getElementById(id).classList.remove('show'); }
 
       function openProfile() {
+          if (!ME) return;
+          document.getElementById('proAv').textContent = ME.name[0].toUpperCase();
+          document.getElementById('proNameInput').value = ME.name;
+          document.getElementById('proPhoneInput').value = ME.phone || '';
+          document.getElementById('proEmailInput').value = ME.email;
+          document.getElementById('proPassInput').value = '';
+          document.getElementById('proRole').innerHTML = `<span class="badge ${roleColor(ME.role)}">${roleLabel(ME.role)}</span>`;
+          document.getElementById('proCoDisplay').textContent = localStorage.getItem('of_company_name') || ME.company_name || 'N/A';
+          document.getElementById('proSlugDisplay').textContent = COMPANY_SLUG;
+          openM('profileM');
+
+          // Call this to ensure the eye icon gets added to the new password field
+          setupPasswordToggles();
+        }
+
+        async function saveProfile() {
+          const name = document.getElementById('proNameInput').value.trim();
+          const phone = document.getElementById('proPhoneInput').value.trim();
+          const password = document.getElementById('proPassInput').value;
+
+          if (!name) return toast('Name is required', 'error');
+
+          const btn = document.querySelector('#profileM .btn-primary');
+          const originalText = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '⏳ Saving...';
+
+          try {
+            const res = await api('PUT', '/auth/me', { name, phone, password });
+            ME = res;
+            localStorage.setItem('of_user', JSON.stringify(res));
+
+            // Update the sidebar and welcome banner with the new name instantly
+            document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
+            document.getElementById('sbNm').textContent = ME.name;
+            const hr = new Date().getHours();
+            document.getElementById('wbGreet').textContent = `${hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'}, ${ME.name.split(' ')[0]} 👋`;
+
+            closeM('profileM');
+            toast('Profile updated successfully!', 'success');
+          } catch (e) {
+            toast(e.message, 'error');
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        }
         if (!ME) return;
         document.getElementById('proAv').textContent = ME.name[0].toUpperCase();
         document.getElementById('proName').textContent = ME.name;
