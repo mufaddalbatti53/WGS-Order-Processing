@@ -46,14 +46,74 @@ router.get('/status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// 2b. GET /api/backup/connect-callback (Google OAuth callback for Drive)
+// Set GOOGLE_DRIVE_REDIRECT_URI=https://your-backend.onrender.com/api/backup/connect-callback
+router.get('/connect-callback', async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const { code, error, state } = req.query;
+
+  if (error) {
+    return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(error)}`);
+  }
+  if (!code || !state) {
+    return res.redirect(`${frontendUrl}#backup?drive_error=missing_params`);
+  }
+
+  try {
+    // state contains: companyId|userId  (base64 encoded)
+    const decoded = Buffer.from(state, 'base64').toString('utf8');
+    const [companyId, userId] = decoded.split('|');
+
+    // Verify user is admin
+    const user = await User.findOne({ _id: userId, company_id: companyId, role: 'admin', is_active: true });
+    if (!user) {
+      return res.redirect(`${frontendUrl}#backup?drive_error=unauthorized`);
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_DRIVE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/backup/connect-callback`
+    );
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+
+    await Company.findByIdAndUpdate(companyId, {
+      'backup_config.is_connected': true,
+      'backup_config.google_refresh_token': tokens.refresh_token,
+      'backup_config.google_email': userInfo.data.email,
+    });
+
+    return res.redirect(`${frontendUrl}#backup?drive_connected=1`);
+  } catch (e) {
+    console.error('[Drive OAuth Callback]', e.message);
+    return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(e.message)}`);
+  }
+});
+
 // 2. GET /api/backup/auth-url (Generate Google Login Link)
 router.get('/auth-url', async (req, res) => {
   try {
-    const oauth2Client = getOAuthClient();
+    const driveRedirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI ||
+      `${process.env.BACKEND_URL || 'https://wgs-order-processing.onrender.com'}/api/backup/connect-callback`;
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      driveRedirectUri
+    );
+
+    // Encode companyId and userId in state so callback can identify the company
+    const state = Buffer.from(`${req.company_id}|${req.user._id}`).toString('base64');
+
     const url = oauth2Client.generateAuthUrl({
-      access_type: 'offline', // CRITICAL: forces refresh_token
-      prompt: 'consent',      // CRITICAL: forces prompt so we get token again if needed
-      scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email']
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email'],
+      state,
     });
     res.json({ url });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -105,7 +165,11 @@ router.post('/drive', async (req, res) => {
       return res.status(400).json({ error: 'Google Drive not connected for this workspace.' });
     }
 
-    const oauth2Client = getOAuthClient();
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_DRIVE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/backup/connect-callback`
+    );
     oauth2Client.setCredentials({ refresh_token: config.google_refresh_token });
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
@@ -158,19 +222,33 @@ router.post('/restore', async (req, res) => {
     res.json({ message: 'Restore completed', imported: imp });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });// GET /api/backup/download (Local JSON Export)
+// This route does its own token verification from query param since it's a browser navigation (no headers)
 router.get('/download', async (req, res) => {
   try {
-    // 1. Get token and slug from Query Params (not headers)
     const token = req.query.token;
     const slug = req.query.slug;
 
     if (!token || !slug) return res.status(401).json({ error: 'Missing auth parameters' });
 
-    // 2. Find the company based on the slug provided in the URL
-    const company = await Company.findOne({ slug });
+    // Verify JWT manually
+    const jwt = require('jsonwebtoken');
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Find the user and verify they are an admin
+    const user = await User.findById(payload.id).select('-password');
+    if (!user || !user.is_active || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Find company by slug and ensure it matches the user's company
+    const company = await Company.findOne({ slug, _id: user.company_id });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    // 3. Fetch all data for this company
     const cid = company._id;
     const backupData = {
       meta: { company_name: company.name, exported_at: new Date().toISOString() },
@@ -181,7 +259,6 @@ router.get('/download', async (req, res) => {
       notifications: await Notification.find({ company_id: cid }).lean()
     };
 
-    // 4. Send as file
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename=WGS_Backup_${slug}_${new Date().toISOString().split('T')[0]}.json`);
     res.send(JSON.stringify(backupData, null, 2));

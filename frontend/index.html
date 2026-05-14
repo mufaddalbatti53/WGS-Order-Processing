@@ -3350,6 +3350,7 @@
       let ME = null;
       let CUR_ORDER = null;
       let PEND_ACTION = null;
+      let ACTION_IN_FLIGHT = false; // ← prevents double-submit
 
       // ================================================================
       // DATA MAPPERS
@@ -3448,7 +3449,11 @@
       }
 
       function openM(id) { document.getElementById(id).classList.add('show'); }
-      function closeM(id) { document.getElementById(id).classList.remove('show'); }
+      function closeM(id) {
+        document.getElementById(id).classList.remove('show');
+        // Reset in-flight guard when action/assign modals are closed
+        if (id === 'actionM' || id === 'assignM') ACTION_IN_FLIGHT = false;
+      }
 
       function openProfile() {
           if (!ME) return;
@@ -3541,25 +3546,16 @@
         if (liveUpdateInterval) clearInterval(liveUpdateInterval);
 
         liveUpdateInterval = setInterval(async () => {
-          if (!getToken()) {
-            clearInterval(liveUpdateInterval);
-            return;
-          }
+          if (!getToken()) { clearInterval(liveUpdateInterval); return; }
+          if (ACTION_IN_FLIGHT) return; // don't poll while an action is in progress
+
           try {
-            const [orders, clients, users, notifs, products] = await Promise.all([
-              api('GET', '/orders'),
-              ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]),
-              ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),
-              ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] }),
-              api('GET', '/products')
-            ]);
-
+            // Always fetch orders — lightweight
+            const orders = await api('GET', '/orders');
             DB.orders = orders.map(mapOrder);
-            DB.clients = clients.map(mapClient);
-            DB.users = users.map(mapUser);
-            DB.notifLog = notifs.logs || [];
-            DB.products = products || [];
+            updatePendingBadge();
 
+            // Only fetch heavier data if on the relevant page
             const activePage = window.location.hash.substring(1) || 'dashboard';
 
             if (activePage === 'dashboard') {
@@ -3567,16 +3563,23 @@
               renderDashRecent();
             } else if (activePage === 'orders') {
               renderOrders();
-              const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
-              const badge = document.getElementById('pendBadge');
-              if (badge) { badge.textContent = pend; badge.style.display = pend > 0 ? '' : 'none'; }
-            } else if (activePage === 'clients') {
+            } else if (activePage === 'clients' && ME.role === 'admin') {
+              const clients = await api('GET', '/clients');
+              DB.clients = clients.map(mapClient);
               renderClients();
+              refreshClientDropdown();
             } else if (activePage === 'products') {
+              const products = await api('GET', '/products');
+              DB.products = products || [];
               renderProducts();
-            } else if (activePage === 'team') {
+            } else if (activePage === 'team' && ME.role === 'admin') {
+              const users = await api('GET', '/users');
+              DB.users = users.map(mapUser);
               renderTeam();
-            } else if (activePage === 'notif-log') {
+              refreshPartnerDropdown();
+            } else if (activePage === 'notif-log' && ME.role === 'admin') {
+              const notifs = await api('GET', '/notifications');
+              DB.notifLog = notifs.logs || [];
               renderNotifLog();
             } else if (activePage === 'order-detail' && CUR_ORDER) {
               const updatedOrder = DB.orders.find(o => String(o.id) === String(CUR_ORDER.id));
@@ -3586,9 +3589,9 @@
               }
             }
           } catch (e) {
-            console.warn('Live update sync failed (will retry in 10s):', e);
+            console.warn('Live update failed (will retry):', e.message);
           }
-        }, 10000);
+        }, 12000); // every 12 seconds
       }
 
       // ================================================================
@@ -3742,20 +3745,6 @@
       // APP SETUP & DATA FETCHING
       // ================================================================
       async function setupApp() {
-        // Catch Google OAuth Return Code for Backup Connection
-        const urlParams = new URLSearchParams(window.location.search);
-        const authCode = urlParams.get('code');
-        if (authCode) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          try {
-            await api('POST', '/backup/connect', { code: authCode });
-            toast('Google Drive Connected Successfully!', 'success');
-            window.location.hash = '#backup';
-          } catch (e) {
-            toast('Failed to connect Drive: ' + e.message, 'error');
-          }
-        }
-
         document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
         document.getElementById('sbNm').textContent = ME.name;
         document.getElementById('sbRl').textContent = roleLabel(ME.role);
@@ -3784,31 +3773,33 @@
           DB.products = products || [];
         } catch (e) { toast('Failed to load data. Please refresh.', 'error'); }
 
-        const psel = document.getElementById('assignPsel');
-        if (psel) {
-          psel.innerHTML = '<option value="">— Choose a Partner —</option>';
-          DB.users.filter(u => u.role === 'partner' && u.active).forEach(p => { psel.innerHTML += `<option value="${p.id}">${H(p.name)}</option>`; });
-        }
-
-        const csel = document.getElementById('no_csel');
-        if (csel) {
-          csel.innerHTML = '<option value="">— New / Walk-in Client —</option>';
-          DB.clients.forEach(c => { csel.innerHTML += `<option value="${c.id}" data-n="${H(c.name)}" data-ph="${H(c.phone || '')}" data-em="${H(c.email || '')}" data-cr="${c.credit}">${H(c.name)} ${c.credit !== 'good' ? '⚠️' : ''}</option>`; });
-        }
-
-        const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
-        if (document.getElementById('pendBadge')) {
-          document.getElementById('pendBadge').textContent = pend;
-          document.getElementById('pendBadge').style.display = pend > 0 ? '' : 'none';
-        }
+        refreshPartnerDropdown();
+        refreshClientDropdown();
+        updatePendingBadge();
 
         renderDashStats();
         renderDashRecent();
         renderNotifLog();
 
+        // Handle Drive connected callback (comes back as hash param)
+        const hash = window.location.hash;
+        if (hash.includes('drive_connected=1')) {
+          window.history.replaceState({}, document.title, window.location.pathname + '#backup');
+          toast('Google Drive Connected Successfully!', 'success');
+          go('backup');
+          return;
+        }
+        if (hash.includes('drive_error=')) {
+          const errMsg = decodeURIComponent(hash.split('drive_error=')[1] || 'unknown');
+          window.history.replaceState({}, document.title, window.location.pathname + '#backup');
+          toast('Drive connection failed: ' + errMsg, 'error');
+          go('backup');
+          return;
+        }
+
         // Read the URL hash to restore the page
-        let hash = window.location.hash.substring(1);
-        let initialPage = hash && document.getElementById(`pg-${hash}`) ? hash : 'dashboard';
+        let hashPage = window.location.hash.substring(1);
+        let initialPage = hashPage && document.getElementById(`pg-${hashPage}`) ? hashPage : 'dashboard';
         if (initialPage === 'order-detail') initialPage = 'orders';
 
         go(initialPage);
@@ -3849,6 +3840,29 @@
       function closeSidebar() {
         document.getElementById('sidebar').classList.remove('mob-open');
         document.getElementById('mobBg').classList.remove('show');
+      }
+
+      // ── DROPDOWN REFRESH HELPERS ──────────────────────────────
+      function refreshClientDropdown() {
+        const csel = document.getElementById('no_csel');
+        if (csel) {
+          csel.innerHTML = '<option value="">— New / Walk-in Client —</option>';
+          DB.clients.forEach(c => { csel.innerHTML += `<option value="${c.id}" data-n="${H(c.name)}" data-ph="${H(c.phone || '')}" data-em="${H(c.email || '')}" data-cr="${c.credit}">${H(c.name)} ${c.credit !== 'good' ? '⚠️' : ''}</option>`; });
+        }
+      }
+
+      function refreshPartnerDropdown() {
+        const psel = document.getElementById('assignPsel');
+        if (psel) {
+          psel.innerHTML = '<option value="">— Choose a Partner —</option>';
+          DB.users.filter(u => u.role === 'partner' && u.active).forEach(p => { psel.innerHTML += `<option value="${p.id}">${H(p.name)}</option>`; });
+        }
+      }
+
+      function updatePendingBadge() {
+        const pend = DB.orders.filter(o => ['received', 'credit_check', 'goods_received', 'quality_failed'].includes(o.status)).length;
+        const badge = document.getElementById('pendBadge');
+        if (badge) { badge.textContent = pend; badge.style.display = pend > 0 ? '' : 'none'; }
       }
 
       function renderDashStats() {
@@ -3970,9 +3984,15 @@
       }
 
       async function submitOrder() {
+        if (ACTION_IN_FLIGHT) return;
         const name = document.getElementById('no_name').value.trim();
         const desc = document.getElementById('no_desc').value.trim();
         if (!name || !desc) return toast('Name and description required.', 'error');
+
+        ACTION_IN_FLIGHT = true;
+        const submitBtn = document.querySelector('#pg-new-order .btn-primary');
+        const origLabel = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Creating...'; }
 
         const cid = document.getElementById('no_csel').value || null;
         const body = {
@@ -3983,16 +4003,33 @@
 
         try {
           const res = await api('POST', '/orders', body);
-          DB.orders.unshift(mapOrder(res));
-          ['no_name', 'no_ph', 'no_em', 'no_desc', 'no_amt', 'no_csel', 'no_product'].forEach(id => {
-            if (document.getElementById(id)) document.getElementById(id).value = '';
+          const newOrder = mapOrder(res);
+          DB.orders.unshift(newOrder);
+          // If the client was walk-in (no cid), they may have been auto-created — refresh clients list silently
+          if (!cid && ME.role === 'admin') {
+            api('GET', '/clients').then(cl => {
+              DB.clients = cl.map(mapClient);
+              refreshClientDropdown();
+            }).catch(() => {});
+          }
+          ['no_name', 'no_ph', 'no_em', 'no_desc', 'no_amt'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
           });
+          const csel = document.getElementById('no_csel');
+          if (csel) csel.value = '';
+          const psel2 = document.getElementById('no_product');
+          if (psel2) psel2.value = '';
           toast(`Order ${res.order_number} created!`, 'success');
           if (res.notifMsg) setTimeout(() => toast(res.notifMsg, 'info'), 800);
-
-          setupApp();
+          updatePendingBadge();
+          renderDashStats();
           viewOrder(res._id);
-        } catch (e) { toast(e.message, 'error'); }
+        } catch (e) {
+          toast(e.message, 'error');
+        } finally {
+          ACTION_IN_FLIGHT = false;
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origLabel; }
+        }
       }
 
       function viewOrder(id) {
@@ -4076,6 +4113,13 @@
       }
 
       async function doAction() {
+        // ── DOUBLE-SUBMIT GUARD ──────────────────────────────────
+        if (ACTION_IN_FLIGHT) return;
+        ACTION_IN_FLIGHT = true;
+        const confirmBtn = document.querySelector('#actionM .btn-primary');
+        const origLabel = confirmBtn ? confirmBtn.textContent : '';
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '⏳ Processing...'; }
+
         const body = { actionKey: PEND_ACTION, notes: document.getElementById('actNotes').value.trim() };
 
         if (PEND_ACTION === 'dispatch') {
@@ -4094,6 +4138,8 @@
               body.billFileBase64 = base64;
               body.billFileName = file.name;
             } catch (e) {
+              ACTION_IN_FLIGHT = false;
+              if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = origLabel; }
               return toast('Failed to read the bill file.', 'error');
             }
           }
@@ -4107,25 +4153,50 @@
           const updated = mapOrder(res);
           const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
           if (idx > -1) DB.orders[idx] = updated;
+          CUR_ORDER = updated;
           closeM('actionM');
-          toast('Action completed successfully!', 'success');
+          toast('Action completed!', 'success');
           if (res.notifMsg) setTimeout(() => toast(res.notifMsg, 'info'), 800);
-
-          setupApp();
+          // Refresh only the order detail view — NO setupApp()
           viewOrder(CUR_ORDER.id);
-        } catch (e) { toast(e.message, 'error'); }
+          renderDashStats();
+          updatePendingBadge();
+        } catch (e) {
+          toast(e.message, 'error');
+        } finally {
+          ACTION_IN_FLIGHT = false;
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = origLabel; }
+        }
       }
 
       async function doAssign() {
+        if (ACTION_IN_FLIGHT) return;
+        ACTION_IN_FLIGHT = true;
+        const btn = document.querySelector('#assignM .btn-primary');
+        const origLabel = btn ? btn.textContent : '';
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Assigning...'; }
         const pid = document.getElementById('assignPsel').value;
-        if (!pid) return toast('Select a partner', 'error');
+        if (!pid) {
+          ACTION_IN_FLIGHT = false;
+          if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+          return toast('Select a partner', 'error');
+        }
         try {
           const res = await api('POST', `/orders/${CUR_ORDER.id}/action`, { actionKey: 'assign_partner', partnerId: pid, notes: document.getElementById('assignNote').value });
+          const updated = mapOrder(res);
           const idx = DB.orders.findIndex(x => String(x.id) === String(CUR_ORDER.id));
-          if (idx > -1) DB.orders[idx] = mapOrder(res);
-          closeM('assignM'); toast('Partner Assigned!', 'success');
-          setupApp(); viewOrder(CUR_ORDER.id);
-        } catch (e) { toast(e.message, 'error'); }
+          if (idx > -1) DB.orders[idx] = updated;
+          CUR_ORDER = updated;
+          closeM('assignM');
+          toast('Partner Assigned!', 'success');
+          viewOrder(CUR_ORDER.id);
+          updatePendingBadge();
+        } catch (e) {
+          toast(e.message, 'error');
+        } finally {
+          ACTION_IN_FLIGHT = false;
+          if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+        }
       }
 
       function renderClients() {
@@ -4144,7 +4215,11 @@
         if (!name) return toast('Client name required.', 'error');
         try {
           const res = await api('POST', '/clients', { name, company: document.getElementById('cl_co').value, email: document.getElementById('cl_em').value, phone: document.getElementById('cl_ph').value, credit_status: document.getElementById('cl_cr').value });
-          DB.clients.push(mapClient(res)); closeM('clientM'); renderClients(); toast('Client added!', 'success');
+          DB.clients.push(mapClient(res));
+          closeM('clientM');
+          renderClients();
+          refreshClientDropdown(); // ← update New Order dropdown instantly
+          toast('Client added!', 'success');
         } catch (e) { toast(e.message, 'error'); }
       }
 
@@ -4175,6 +4250,7 @@
           if (idx > -1) DB.clients[idx] = mapClient(res);
           closeM('editClientM');
           renderClients();
+          refreshClientDropdown(); // ← keep dropdown in sync
           toast('Client details saved successfully!', 'success');
         } catch (e) { toast(e.message, 'error'); }
       }
@@ -4210,7 +4286,11 @@
       async function saveUser() {
         try {
           const res = await api('POST', '/users', { name: document.getElementById('u_n').value, email: document.getElementById('u_e').value, password: document.getElementById('u_p').value, role: document.getElementById('u_r').value });
-          DB.users.push(mapUser(res)); closeM('userM'); renderTeam(); toast('Team member added!', 'success');
+          DB.users.push(mapUser(res));
+          closeM('userM');
+          renderTeam();
+          refreshPartnerDropdown(); // ← keep assign partner dropdown in sync
+          toast('Team member added!', 'success');
         } catch (e) { toast(e.message, 'error'); }
       }
 
@@ -4387,7 +4467,13 @@
             const res = await api('POST', '/backup/restore', data);
             toast(`Restore complete! Imported ${res.imported.orders || 0} missing orders.`, 'success');
             input.value = '';
-            setupApp();
+            // Refresh data without re-navigating
+            const [orders, clients] = await Promise.all([api('GET', '/orders'), api('GET', '/clients')]);
+            DB.orders = orders.map(mapOrder);
+            DB.clients = clients.map(mapClient);
+            refreshClientDropdown();
+            updatePendingBadge();
+            renderDashStats();
           } catch (err) { toast(err.message, 'error'); }
         };
         reader.readAsText(file);
