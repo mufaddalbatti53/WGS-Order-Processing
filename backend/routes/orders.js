@@ -59,15 +59,44 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/orders
+// POST /api/orders
 router.post('/', adminOnly, async (req, res) => {
   try {
     const { clientId, clientName, clientEmail, clientPhone, source, description, priority, amount } = req.body;
     if (!clientName?.trim()) return res.status(400).json({ error: 'Client name required' });
     if (!description?.trim()) return res.status(400).json({ error: 'Description required' });
 
+    let actualClientId = clientId;
+
+    // AUTO-SAVE NEW WALK-IN CLIENT
+    if (!actualClientId) {
+      // Check if client already exists by phone/email to avoid duplicates
+      const orConditions = [];
+      if (clientEmail && clientEmail.trim()) orConditions.push({ email: clientEmail.trim().toLowerCase() });
+      if (clientPhone && clientPhone.trim()) orConditions.push({ phone: clientPhone.trim() });
+
+      let existingClient = null;
+      if (orConditions.length > 0) {
+        existingClient = await Client.findOne({ company_id: req.company_id, $or: orConditions });
+      }
+
+      if (existingClient) {
+        actualClientId = existingClient._id;
+      } else {
+        const newClient = await Client.create({
+          company_id: req.company_id,
+          name: clientName.trim(),
+          email: clientEmail ? clientEmail.trim().toLowerCase() : '',
+          phone: clientPhone ? clientPhone.trim() : '',
+          created_by: req.user._id,
+        });
+        actualClientId = newClient._id;
+      }
+    }
+
     let initialStatus = 'received', creditNote = null;
-    if (clientId) {
-      const cl = await Client.findOne({ _id: clientId, company_id: req.company_id });
+    if (actualClientId) {
+      const cl = await Client.findOne({ _id: actualClientId, company_id: req.company_id });
       if (cl && cl.credit_status !== 'good') {
         initialStatus = 'credit_rejected';
         creditNote = 'Client has pending dues — credit hold in effect.';
@@ -240,5 +269,13 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Order deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
+// POST /api/orders/bulk-delete
+router.post('/bulk-delete', adminOnly, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid IDs array' });
+    await Order.deleteMany({ _id: { $in: ids }, company_id: req.company_id });
+    res.json({ message: `${ids.length} orders deleted` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 module.exports = router;

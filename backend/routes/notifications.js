@@ -69,5 +69,14 @@ router.post('/test-whatsapp', async (req, res) => {
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
+// POST /api/notifications/bulk-delete
+router.post('/bulk-delete', adminOnly, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid IDs array' });
+    const { Notification } = require('../db/models'); // Ensure model is imported
+    await Notification.deleteMany({ _id: { $in: ids }, company_id: req.company_id });
+    res.json({ message: `${ids.length} notifications deleted` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 module.exports = router;

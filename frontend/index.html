@@ -1787,12 +1787,15 @@
 
     .toast-success {
       border-color: var(--green-l);
-      color: var(--green);
+      color: #fff;
     }
 
+    ;
+
     .toast-error {
-      border-color: var(--red-l);
-      color: var(--red);
+      background: var(--red);
+      border-color: #b91c1c;
+      color: #fff;
     }
 
     .toast-info {
@@ -2559,6 +2562,9 @@
         <div class="nav-item admin-only" data-p="clients" onclick="go('clients')">
           <span class="nav-icon">👥</span> Clients
         </div>
+        <div class="nav-item admin-only" data-p="products" onclick="go('products')">
+          <span class="nav-icon">📦</span> Products
+        </div>
         <div class="sb-section admin-only">Administration</div>
         <div class="nav-item admin-only" data-p="team" onclick="go('team')">
           <span class="nav-icon">⚙️</span> Team & Users
@@ -2719,6 +2725,8 @@
               <option value="referral">👥 Referral</option>
             </select>
             <button class="btn btn-primary btn-sm admin-only" onclick="go('new-order')">+ New Order</button>
+            <button class="btn btn-danger btn-sm admin-only" onclick="doBulkDelete('order', '/orders/bulk-delete')">🗑️ Delete
+              Selected</button>
           </div>
           <div class="card">
             <div class="card-top">
@@ -2814,6 +2822,13 @@
                 </div>
               </div>
               <div class="f-row">
+                <div class="field"
+                  style="margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+                  <label>Select Product / Service</label>
+                  <select id="no_product" onchange="fillProduct(this)">
+                    <option value="">— Custom Order (Type below) —</option>
+                  </select>
+                </div>
                 <div class="field">
                   <label>Client Name *</label>
                   <input type="text" id="no_name" placeholder="Full name or company">
@@ -2865,6 +2880,8 @@
               <option value="blocked">🚫 Blocked</option>
             </select>
             <button class="btn btn-primary btn-sm admin-only" onclick="openM('clientM')">+ Add Client</button>
+            <button class="btn btn-danger btn-sm admin-only" onclick="doBulkDelete('client', '/clients/bulk-delete')">🗑️ Delete
+              Selected</button>
           </div>
           <div class="card">
             <div class="card-top">
@@ -2876,7 +2893,23 @@
             </div>
           </div>
         </div>
-
+        <div class="page" id="pg-products">
+          <div class="filter-bar">
+            <input type="text" id="srchProducts" placeholder="🔍 Search products..." oninput="renderProducts()">
+            <button class="btn btn-primary btn-sm admin-only"
+              onclick="openM('productM'); document.getElementById('pr_n').value=''; document.getElementById('pr_desc').value=''; document.getElementById('pr_price').value='';">+
+              Add Product</button>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <h3>Products Catalog <span id="prCnt"
+                  style="font-size:12px;color:var(--text4);font-weight:500;margin-left:4px"></span></h3>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" id="productsTbl"></table>
+            </div>
+          </div>
+        </div>
         <!-- ====== TEAM ====== -->
         <div class="page" id="pg-team">
           <div class="card mb-20">
@@ -2916,7 +2949,27 @@
         <!-- ====== NOTIFICATIONS LOG ====== -->
         <div class="page" id="pg-notif-log">
           <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px" id="notifStats"></div>
-
+        
+          <div class="filter-bar">
+            <input type="text" id="srchNotif" placeholder="🔍 Search recipient or subject..." oninput="renderNotifLog()">
+            <select id="fNotifStatus" onchange="renderNotifLog()">
+              <option value="">All Statuses</option>
+              <option value="sent">✅ Sent</option>
+              <option value="failed">❌ Failed</option>
+              <option value="pending">⏳ Pending</option>
+            </select>
+          
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:12px; font-weight:600; color:var(--text3);">From:</span>
+              <input type="date" id="fNotifStart" onchange="renderNotifLog()">
+              <span style="font-size:12px; font-weight:600; color:var(--text3);">To:</span>
+              <input type="date" id="fNotifEnd" onchange="renderNotifLog()">
+            </div>
+          
+            <button class="btn btn-danger btn-sm admin-only" style="margin-left:auto;"
+              onclick="doBulkDelete('notif', '/notifications/bulk-delete')">🗑️ Delete Selected</button>
+          </div>
+        
           <div class="card">
             <div class="card-top">
               <h3>Notification Log</h3>
@@ -2925,9 +2978,9 @@
               <table class="tbl">
                 <thead>
                   <tr>
+                    <th style="width:40px"><input type="checkbox" onchange="toggleAll(this, 'chk-notif')"></th>
                     <th>Time</th>
                     <th>Type</th>
-                    <th>Order</th>
                     <th>Recipient</th>
                     <th>Subject</th>
                     <th>Status</th>
@@ -2951,10 +3004,12 @@
                 <span style="font-size:32px">📥</span>
                 <div>
                   <div style="font-weight:700;font-size:16px;color:var(--text)">Download Backup</div>
-                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Save a full JSON backup to your device</div>
+                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Save a full JSON backup to your device
+                  </div>
                 </div>
               </div>
-              <p style="font-size:13.5px;color:var(--text3);margin:0 0 20px">Includes all staff, clients, orders and notification logs. Download and keep a local copy anytime.</p>
+              <p style="font-size:13.5px;color:var(--text3);margin:0 0 20px">Includes all staff, clients, orders and
+                notification logs. Download and keep a local copy anytime.</p>
               <button class="btn btn-primary" style="width:100%" onclick="downloadBackup()" id="btnDownload">
                 📥 Download to Device
               </button>
@@ -2966,11 +3021,14 @@
                 <span style="font-size:32px">☁️</span>
                 <div>
                   <div style="font-weight:700;font-size:16px;color:var(--text)">Google Drive Backup</div>
-                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Push backup directly to your Drive folder</div>
+                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Push backup directly to your Drive
+                    folder</div>
                 </div>
               </div>
-              <div id="driveStatus" style="font-size:13px;color:var(--text3);margin-bottom:16px">Checking Drive configuration…</div>
-              <button class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#1a73e8,#0d62d1)" onclick="driveBackup()" id="btnDrive">
+              <div id="driveStatus" style="font-size:13px;color:var(--text3);margin-bottom:16px">Checking Drive
+                configuration…</div>
+              <button class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#1a73e8,#0d62d1)"
+                onclick="driveBackup()" id="btnDrive">
                 ☁️ Upload to Google Drive
               </button>
               <div id="driveResult" style="margin-top:14px;display:none"></div>
@@ -2983,11 +3041,14 @@
               <span style="font-size:32px">🔄</span>
               <div>
                 <div style="font-weight:700;font-size:16px;color:var(--text)">Restore from Backup</div>
-                <div style="font-size:13px;color:var(--text3);margin-top:2px">Re-import data from a previously downloaded backup file</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:2px">Re-import data from a previously
+                  downloaded backup file</div>
               </div>
             </div>
-            <div style="background:var(--yellow-t);border:1px solid var(--yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--yellow)">
-              ⚠️ <strong>Safe restore:</strong> Only missing records are imported — existing data is never overwritten or deleted.
+            <div
+              style="background:var(--yellow-t);border:1px solid var(--yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--yellow)">
+              ⚠️ <strong>Safe restore:</strong> Only missing records are imported — existing data is never overwritten
+              or deleted.
             </div>
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
               <label class="btn btn-outline" style="cursor:pointer;margin:0" for="restoreFile">
@@ -2995,11 +3056,13 @@
               </label>
               <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="previewRestore(this)">
               <span id="restoreFileName" style="font-size:13px;color:var(--text3)">No file chosen</span>
-              <button class="btn btn-primary" id="btnRestore" style="display:none;background:linear-gradient(135deg,#059669,#047857)" onclick="doRestore()">
+              <button class="btn btn-primary" id="btnRestore"
+                style="display:none;background:linear-gradient(135deg,#059669,#047857)" onclick="doRestore()">
                 🔄 Restore Now
               </button>
             </div>
-            <div id="restorePreview" style="display:none;margin-top:18px;padding:16px;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border)">
+            <div id="restorePreview"
+              style="display:none;margin-top:18px;padding:16px;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border)">
               <div style="font-weight:600;color:var(--text);margin-bottom:10px">📋 Backup Preview</div>
               <div id="restorePreviewContent"></div>
             </div>
@@ -3225,10 +3288,49 @@
       </div>
     </div>
   </div>
-
-  <!-- Toast Container -->
+  
+  <div class="overlay" id="productM" onclick="if(event.target===this)closeM('productM')">
+    <div class="modal">
+      <div class="modal-hd">
+        <h3>Add New Product</h3><button class="modal-close" onclick="closeM('productM')">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div class="field"><label>Product Name *</label><input id="pr_n" placeholder="e.g. Standard Widget"></div>
+        <div class="field"><label>Base Price (₹) *</label><input type="number" id="pr_price" placeholder="0.00" min="0">
+        </div>
+        <div class="field"><label>Default Description / Specs</label><textarea id="pr_desc" rows="3"
+            placeholder="Specs that will auto-fill on new orders..."></textarea></div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn btn-outline btn-sm" onclick="closeM('productM')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveProduct()">Save Product →</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="overlay" id="editProductM" onclick="if(event.target===this)closeM('editProductM')">
+    <div class="modal">
+      <div class="modal-hd">
+        <h3>Edit Product</h3><button class="modal-close" onclick="closeM('editProductM')">✕</button>
+      </div>
+      <div class="modal-bd">
+        <input type="hidden" id="epr_id">
+        <div class="field"><label>Product Name *</label><input id="epr_n"></div>
+        <div class="field"><label>Base Price (₹) *</label><input type="number" id="epr_price" min="0"></div>
+        <div class="field"><label>Default Description / Specs</label><textarea id="epr_desc" rows="3"></textarea></div>
+      </div>
+      <div class="modal-ft" style="justify-content:space-between">
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct()">🗑️ Delete</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline btn-sm" onclick="closeM('editProductM')">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="saveEditProduct()">Save Changes →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <div class="toast-wrap" id="toastWrap"></div>
-
+  
   <script>
     'use strict';
 
@@ -3240,7 +3342,7 @@
     let COMPANY_SLUG = localStorage.getItem('of_slug') || '';
 
     // Central Data Store
-    let DB = { orders: [], clients: [], users: [], notifLog: [] };
+    let DB = { orders: [], clients: [], users: [], notifLog: [], products: [] };
     let ME = null;
     let CUR_ORDER = null;
     let PEND_ACTION = null;
@@ -3308,7 +3410,29 @@
       if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
       return Math.floor(diff / 86400) + 'd ago';
     }
+  function toggleAll(masterChk, className) {
+    document.querySelectorAll('.' + className).forEach(chk => chk.checked = masterChk.checked);
+  }
 
+  async function doBulkDelete(type, endpoint) {
+    const checkboxes = document.querySelectorAll('.chk-' + type + ':checked');
+    const ids = Array.from(checkboxes).map(chk => chk.value);
+
+    if (ids.length === 0) return toast('Select at least one item to delete.', 'error');
+    if (!confirm(`Are you sure you want to permanently delete ${ids.length} selected items?`)) return;
+
+    try {
+      await api('POST', endpoint, { ids });
+      toast(`Successfully deleted ${ids.length} items.`, 'success');
+
+      // Remove deleted items from local state and re-render
+      if (type === 'order') { DB.orders = DB.orders.filter(x => !ids.includes(String(x.id))); renderOrders(); }
+      if (type === 'client') { DB.clients = DB.clients.filter(x => !ids.includes(String(x.id))); renderClients(); }
+      if (type === 'notif') { DB.notifLog = DB.notifLog.filter(x => !ids.includes(String(x._id || x.id))); renderNotifLog(); }
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
     function toast(msg, type = 'info') {
       const c = document.getElementById('toastWrap');
       const el = document.createElement('div');
@@ -3498,18 +3622,19 @@
 
       try {
         // Download data based on the user's role
-        const [orders, clients, users, notifs] = await Promise.all([
-          api('GET', '/orders'), // Everyone gets to see orders (backend filters them)
-          ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]), // Admins only
-          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),   // Admins only
-          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] }) // Admins only
+        const [orders, clients, users, notifs, products] = await Promise.all([
+          api('GET', '/orders'),
+          ME.role === 'admin' ? api('GET', '/clients') : Promise.resolve([]),
+          ME.role === 'admin' ? api('GET', '/users') : Promise.resolve([]),
+          ME.role === 'admin' ? api('GET', '/notifications') : Promise.resolve({ logs: [] }),
+          api('GET', '/products') 
         ]);
 
         DB.orders = orders.map(mapOrder);
         DB.clients = clients.map(mapClient);
         DB.users = users.map(mapUser);
         DB.notifLog = notifs.logs || [];
-
+        DB.products = products || []; 
       } catch (e) { toast('Failed to load data. Please refresh.', 'error'); }
 
       const psel = document.getElementById('assignPsel');
@@ -3544,7 +3669,7 @@
 
       const titles = { dashboard: 'Dashboard', orders: 'Orders', 'new-order': 'New Order', 'order-detail': 'Order Detail', clients: 'Clients', team: 'Team & Users', 'notif-log': 'Notifications', backup: 'Backup & Restore' };
       if (document.getElementById('topTitle')) document.getElementById('topTitle').textContent = titles[page] || page;
-
+      if (page === 'products') renderProducts();
       if (page === 'orders') renderOrders();
       if (page === 'clients') renderClients();
       if (page === 'team') renderTeam();
@@ -3589,6 +3714,26 @@
     }
 
     function renderOrders() {
+        const q = (document.getElementById('srchOrders')?.value || '').toLowerCase();
+        const sf = document.getElementById('fStatus')?.value || '';
+        const fSource = document.getElementById('fSrc')?.value || '';
+
+        let list = DB.orders.filter(o => {
+          if (sf && o.status !== sf) return false;
+          if (fSource && o.src !== fSource) return false;
+          if (q && ![o.num, o.cName].some(v => (v || '').toLowerCase().includes(q))) return false;
+          return true;
+        });
+
+        if (document.getElementById('ordCnt')) document.getElementById('ordCnt').textContent = `— ${list.length} orders`;
+        if (document.getElementById('ordersTbl')) document.getElementById('ordersTbl').innerHTML = `
+        <thead><tr><th style="width:40px"><input type="checkbox" onchange="toggleAll(this, 'chk-order')"></th><th>Order #</th><th>Client</th><th>Status</th><th>Partner</th><th>Updated</th></tr></thead>
+        <tbody>${list.map(o => `
+        <tr onclick="viewOrder('${o.id}')">
+          <td onclick="event.stopPropagation()"><input type="checkbox" class="chk-order" value="${o.id}"></td>
+          <td><span class="mono">${H(o.num)}</span></td><td><div class="strong">${H(o.cName)}</div></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${o.pName || '—'}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td>
+        </tr>`).join('')}</tbody>`;
+      }
       const q = (document.getElementById('srchOrders')?.value || '').toLowerCase();
       const sf = document.getElementById('fStatus')?.value || '';
       const fSource = document.getElementById('fSrc')?.value || ''; // <-- 1. Read the Source Dropdown
@@ -3612,7 +3757,68 @@
       document.getElementById('no_em').value = opt.dataset.em || '';
       document.getElementById('noAlert').innerHTML = (opt.dataset.cr && opt.dataset.cr !== 'good') ? `<div class="alert alert-warn">⚠️ Client has a credit hold.</div>` : '';
     }
+  // --- PRODUCT LOGIC ---
+  function renderProducts() {
+    const q = (document.getElementById('srchProducts')?.value || '').toLowerCase();
+    let list = DB.products.filter(p => !q || p.name.toLowerCase().includes(q));
 
+    if (document.getElementById('prCnt')) document.getElementById('prCnt').textContent = `— ${list.length} products`;
+    if (document.getElementById('productsTbl')) document.getElementById('productsTbl').innerHTML = `<thead><tr><th>Product</th><th>Price</th><th>Description</th><th>Actions</th></tr></thead><tbody>${list.map(p => `
+     <tr><td><span class="strong">${H(p.name)}</span></td><td><span class="badge b-green">₹${p.price}</span></td><td><span class="muted" style="font-size:12px">${H(p.description).substring(0, 40)}...</span></td>
+     <td><button class="btn btn-outline btn-xs" onclick="editProduct('${p.id}')">✏️ Edit</button></td></tr>`).join('')}</tbody>`;
+
+    // Update dropdown in New Order screen
+    const pSel = document.getElementById('no_product');
+    if (pSel) {
+      pSel.innerHTML = '<option value="">— Custom Order (Type below) —</option>' + DB.products.map(p => `<option value="${p.id}" data-desc="${H(p.description)}" data-price="${p.price}">${H(p.name)} - ₹${p.price}</option>`).join('');
+    }
+  }
+
+  function fillProduct(sel) {
+    if (!sel.value) return;
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('no_desc').value = opt.dataset.desc || '';
+    document.getElementById('no_amt').value = opt.dataset.price || '';
+  }
+
+  async function saveProduct() {
+    const name = document.getElementById('pr_n').value.trim();
+    if (!name) return toast('Product name required.', 'error');
+    try {
+      const res = await api('POST', '/products', { name, description: document.getElementById('pr_desc').value, price: document.getElementById('pr_price').value });
+      DB.products.push({ ...res, id: res._id });
+      closeM('productM'); renderProducts(); toast('Product added!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  function editProduct(id) {
+    const p = DB.products.find(x => String(x.id) === String(id)); if (!p) return;
+    document.getElementById('epr_id').value = id;
+    document.getElementById('epr_n').value = p.name;
+    document.getElementById('epr_desc').value = p.description || '';
+    document.getElementById('epr_price').value = p.price || 0;
+    openM('editProductM');
+  }
+
+  async function saveEditProduct() {
+    const id = document.getElementById('epr_id').value;
+    try {
+      const res = await api('PUT', `/products/${id}`, { name: document.getElementById('epr_n').value, description: document.getElementById('epr_desc').value, price: document.getElementById('epr_price').value });
+      const idx = DB.products.findIndex(x => String(x.id) === String(id));
+      if (idx > -1) DB.products[idx] = { ...res, id: res._id };
+      closeM('editProductM'); renderProducts(); toast('Product updated!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  async function deleteProduct() {
+    const id = document.getElementById('epr_id').value;
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await api('DELETE', `/products/${id}`);
+      DB.products = DB.products.filter(x => String(x.id) !== String(id));
+      closeM('editProductM'); renderProducts(); toast('Product deleted.', 'error');
+    } catch (e) { toast(e.message, 'error'); }
+  }
     async function submitOrder() {
       const name = document.getElementById('no_name').value.trim();
       const desc = document.getElementById('no_desc').value.trim();
@@ -3768,10 +3974,15 @@
       } catch (e) { toast(e.message, 'error'); }
     }
 
-    function renderClients() {
+   function renderClients() {
       if (document.getElementById('clCnt')) document.getElementById('clCnt').textContent = `— ${DB.clients.length} clients`;
-      if (document.getElementById('clientsTbl')) document.getElementById('clientsTbl').innerHTML = `<thead><tr><th>Name</th><th>Email</th><th>Credit</th>${ME.role === 'admin' ? '<th>Actions</th>' : ''}</tr></thead><tbody>${DB.clients.map(c => `
-        <tr><td><span class="strong">${H(c.name)}</span></td><td><span class="muted">${H(c.email || '—')}</span></td><td>${creditChip(c.credit)}</td>${ME.role === 'admin' ? `<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}')">Edit</button></td>` : ''}</tr>`).join('')}</tbody>`;
+      if (document.getElementById('clientsTbl')) document.getElementById('clientsTbl').innerHTML = `
+        <thead><tr><th style="width:40px"><input type="checkbox" onchange="toggleAll(this, 'chk-client')"></th><th>Name</th><th>Email</th><th>Credit</th>${ME.role === 'admin' ? '<th>Actions</th>' : ''}</tr></thead>
+        <tbody>${DB.clients.map(c => `
+        <tr>
+          <td><input type="checkbox" class="chk-client" value="${c.id}"></td>
+          <td><span class="strong">${H(c.name)}</span></td><td><span class="muted">${H(c.email || '—')}</span></td><td>${creditChip(c.credit)}</td>${ME.role === 'admin' ? `<td><button class="btn btn-outline btn-xs" onclick="editClient('${c.id}')">Edit</button></td>` : ''}
+        </tr>`).join('')}</tbody>`;
     }
 
     async function saveClient() {
@@ -3785,17 +3996,41 @@
 
     function editClient(id) {
       const c = DB.clients.find(x => String(x.id) === String(id)); if (!c) return;
-      document.getElementById('ec_id').value = id; document.getElementById('ec_n').value = c.name; document.getElementById('ec_cr').value = c.credit; openM('editClientM');
+      document.getElementById('ec_id').value = id;
+      document.getElementById('ec_n').value = c.name;
+      document.getElementById('ec_co').value = c.company || '';
+      document.getElementById('ec_ph').value = c.phone || '';
+      document.getElementById('ec_em').value = c.email || '';
+      document.getElementById('ec_cr').value = c.credit;
+      document.getElementById('ec_pd').value = c.pending || 0;
+      openM('editClientM');
     }
 
     async function saveEditClient() {
       const id = document.getElementById('ec_id').value;
       try {
-        const res = await api('PUT', `/clients/${id}`, { name: document.getElementById('ec_n').value, credit_status: document.getElementById('ec_cr').value });
+        const res = await api('PUT', `/clients/${id}`, {
+          name: document.getElementById('ec_n').value,
+          company: document.getElementById('ec_co').value,
+          phone: document.getElementById('ec_ph').value,
+          email: document.getElementById('ec_em').value,
+          credit_status: document.getElementById('ec_cr').value,
+          pending_amount: document.getElementById('ec_pd').value
+        });
         const idx = DB.clients.findIndex(x => String(x.id) === String(id));
         if (idx > -1) DB.clients[idx] = mapClient(res);
-        closeM('editClientM'); renderClients(); toast('Client updated!', 'success');
+        closeM('editClientM');
+        renderClients();
+        toast('Client details saved successfully!', 'success');
       } catch (e) { toast(e.message, 'error'); }
+    }
+    const id = document.getElementById('ec_id').value;
+    try {
+      const res = await api('PUT', `/clients/${id}`, { name: document.getElementById('ec_n').value, credit_status: document.getElementById('ec_cr').value });
+      const idx = DB.clients.findIndex(x => String(x.id) === String(id));
+      if (idx > -1) DB.clients[idx] = mapClient(res);
+      closeM('editClientM'); renderClients(); toast('Client updated!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
     }
 
     function renderTeam() {
@@ -3856,8 +4091,46 @@
       } catch (e) { toast(e.message, 'error'); }
     }
     function renderNotifLog() {
-      if (document.getElementById('notifTbody')) document.getElementById('notifTbody').innerHTML = DB.notifLog.slice(0, 50).map(n => `<tr><td><span class="muted" style="font-size:12.5px">${n.at}</span></td><td><span class="badge b-sky">${n.type}</span></td><td><span class="muted">${H(n.to)}</span></td><td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : `<span class="badge b-red">❌ Failed</span>`}</td></tr>`).join('');
-    }
+        const q = (document.getElementById('srchNotif')?.value || '').toLowerCase();
+        const s = document.getElementById('fNotifStatus')?.value || '';
+
+        // Get Date Filters
+        const startStr = document.getElementById('fNotifStart')?.value;
+        const endStr = document.getElementById('fNotifEnd')?.value;
+        const dStart = startStr ? new Date(startStr).setHours(0, 0, 0, 0) : null;
+        const dEnd = endStr ? new Date(endStr).setHours(23, 59, 59, 999) : null;
+
+        let list = DB.notifLog.filter(n => {
+          if (s && n.status !== s) return false;
+          if (q && ![n.recipient, n.to, n.subject].some(v => (v || '').toLowerCase().includes(q))) return false;
+
+          // Date Filtering Logic
+          if (dStart || dEnd) {
+            const rawDate = n.created_at || n.sent_at || n.at; // Fallbacks for different date formats
+            if (rawDate) {
+              const nTime = new Date(rawDate).getTime();
+              if (!isNaN(nTime)) {
+                if (dStart && nTime < dStart) return false;
+                if (dEnd && nTime > dEnd) return false;
+              }
+            }
+          }
+
+          return true;
+        });
+
+        if (document.getElementById('notifTbody')) {
+          document.getElementById('notifTbody').innerHTML = list.slice(0, 50).map(n => `
+          <tr>
+            <td><input type="checkbox" class="chk-notif" value="${n._id || n.id}"></td>
+            <td><span class="muted" style="font-size:12.5px">${n.at || n.sent_at || '—'}</span></td>
+            <td><span class="badge b-sky">${n.type}</span></td>
+            <td><span class="muted">${H(n.recipient || n.to)}</span></td>
+            <td>${H(n.subject || '—')}</td>
+            <td>${n.status === 'sent' ? `<span class="badge b-green">✅ Sent</span>` : n.status === 'failed' ? `<span class="badge b-red">❌ Failed</span>` : `<span class="badge b-yellow">⏳ Pending</span>`}</td>
+          </tr>`).join('');
+        }
+      }
     // ================================================================
     // PASSWORD VISIBILITY TOGGLE (EYE ICON)
     // ================================================================
@@ -3907,9 +4180,9 @@
         const statsEl = document.getElementById('backupStats');
         if (statsEl) {
           statsEl.innerHTML = [
-            { l: 'Staff', v: s.data.staff,         cls: 'sc-blue',   i: '👤' },
-            { l: 'Clients', v: s.data.clients,     cls: 'sc-purple', i: '👥' },
-            { l: 'Orders', v: s.data.orders,       cls: 'sc-yellow', i: '📋' },
+            { l: 'Staff', v: s.data.staff, cls: 'sc-blue', i: '👤' },
+            { l: 'Clients', v: s.data.clients, cls: 'sc-purple', i: '👥' },
+            { l: 'Orders', v: s.data.orders, cls: 'sc-yellow', i: '📋' },
             { l: 'Notifications', v: s.data.notifications, cls: 'sc-green', i: '🔔' },
           ].map(x => `<div class="stat-card ${x.cls}"><div class="sc-icon">${x.i}</div><div class="sc-num">${x.v}</div><div class="sc-lbl">${x.l}</div></div>`).join('');
         }

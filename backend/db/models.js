@@ -37,7 +37,15 @@ const OtpSchema = new Schema({
   expires_at: { type: Date, required: true },
   used: { type: Boolean, default: false },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
-
+// ── Product ───────────────────────────────────────────────
+const ProductSchema = new Schema({
+  company_id: { type: Schema.Types.ObjectId, ref: 'Company', required: true },
+  name: { type: String, required: true, trim: true },
+  description: { type: String, default: '' },
+  price: { type: Number, default: 0 },
+  is_active: { type: Boolean, default: true },
+  created_by: { type: Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 // ── Client ────────────────────────────────────────────────
 const ClientSchema = new Schema({
   company_id: { type: Schema.Types.ObjectId, ref: 'Company', required: true },
@@ -104,6 +112,7 @@ module.exports = {
   Company: mongoose.model('Company', CompanySchema),
   User: mongoose.model('User', UserSchema),
   Otp: mongoose.model('Otp', OtpSchema),
+  Product: mongoose.model('Product', ProductSchema),
   Client: mongoose.model('Client', ClientSchema),
   Order: mongoose.model('Order', OrderSchema),
   Notification: mongoose.model('Notification', NotificationSchema),

@@ -109,5 +109,13 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Client deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
+// POST /api/clients/bulk-delete
+router.post('/bulk-delete', adminOnly, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid IDs array' });
+    await Client.deleteMany({ _id: { $in: ids }, company_id: req.company_id });
+    res.json({ message: `${ids.length} clients deleted` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 module.exports = router;
