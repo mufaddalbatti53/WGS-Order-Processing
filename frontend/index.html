@@ -2998,89 +2998,49 @@
         </div>
 
         <div class="page" id="pg-backup">
-          <!-- Stats row -->
-          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px" id="backupStats"></div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-
-            <!-- Download to device -->
-            <div class="card" style="padding:28px">
-              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <span style="font-size:32px">📥</span>
-                <div>
-                  <div style="font-weight:700;font-size:16px;color:var(--text)">Download Backup</div>
-                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Save a full JSON backup to your device
-                  </div>
-                </div>
-              </div>
-              <p style="font-size:13.5px;color:var(--text3);margin:0 0 20px">Includes all staff, clients, orders and
-                notification logs. Download and keep a local copy anytime.</p>
-              <button class="btn btn-primary" style="width:100%" onclick="downloadBackup()" id="btnDownload">
-                📥 Download to Device
-              </button>
-            </div>
-
-            <!-- Upload to Google Drive -->
-            <div class="card" style="padding:28px">
-              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <span style="font-size:32px">☁️</span>
-                <div>
-                  <div style="font-weight:700;font-size:16px;color:var(--text)">Google Drive Backup</div>
-                  <div style="font-size:13px;color:var(--text3);margin-top:2px">Push backup directly to your Drive
-                    folder</div>
-                </div>
-              </div>
-              <div id="driveStatus" style="font-size:13px;color:var(--text3);margin-bottom:16px">Checking Drive
-                configuration…</div>
-              <button class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#1a73e8,#0d62d1)"
-                onclick="driveBackup()" id="btnDrive">
-                ☁️ Upload to Google Drive
-              </button>
-              <div id="driveResult" style="margin-top:14px;display:none"></div>
-            </div>
-          </div>
-
-          <!-- Restore -->
-          <div class="card" style="padding:28px;margin-bottom:18px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-              <span style="font-size:32px">🔄</span>
-              <div>
-                <div style="font-weight:700;font-size:16px;color:var(--text)">Restore from Backup</div>
-                <div style="font-size:13px;color:var(--text3);margin-top:2px">Re-import data from a previously
-                  downloaded backup file</div>
-              </div>
-            </div>
-            <div
-              style="background:var(--yellow-t);border:1px solid var(--yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--yellow)">
-              ⚠️ <strong>Safe restore:</strong> Only missing records are imported — existing data is never overwritten
-              or deleted.
-            </div>
-            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-              <label class="btn btn-outline" style="cursor:pointer;margin:0" for="restoreFile">
-                📂 Choose Backup File (.json)
-              </label>
-              <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="previewRestore(this)">
-              <span id="restoreFileName" style="font-size:13px;color:var(--text3)">No file chosen</span>
-              <button class="btn btn-primary" id="btnRestore"
-                style="display:none;background:linear-gradient(135deg,#059669,#047857)" onclick="doRestore()">
-                🔄 Restore Now
-              </button>
-            </div>
-            <div id="restorePreview"
-              style="display:none;margin-top:18px;padding:16px;background:var(--bg-panel);border-radius:10px;border:1px solid var(--border)">
-              <div style="font-weight:600;color:var(--text);margin-bottom:10px">📋 Backup Preview</div>
-              <div id="restorePreviewContent"></div>
-            </div>
-            <div id="restoreResult" style="display:none;margin-top:16px"></div>
-          </div>
-
-          <!-- Backup history log (last Drive uploads from notification log) -->
-          <div class="card">
+          <div class="card" style="max-width:800px; margin:0 auto;">
             <div class="card-top">
-              <h3>Recent Backup Activity</h3>
-              <button class="btn btn-outline btn-sm" onclick="loadBackupStatus()">↻ Refresh</button>
+              <h3>💾 Backup & Restore Settings</h3>
             </div>
-            <div id="backupLog" style="padding:20px;text-align:center;color:var(--text4);font-size:14px">Loading…</div>
+            <div class="card-body">
+        
+              <div id="driveStatusBox"
+                style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:30px 20px; margin-bottom:24px; text-align:center;">
+              </div>
+        
+              <div id="driveConfigBox"
+                style="display:none; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;">
+                <h4 style="margin-top:0; margin-bottom:16px; color:var(--text);">Automated Cloud Settings</h4>
+        
+                <div class="field">
+                  <label>Google Drive Folder ID</label>
+                  <input type="text" id="bkFolder" placeholder="Paste the string from your Google Drive Folder URL">
+                </div>
+        
+                <div class="field">
+                  <label>Automated Backup Frequency (Days)</label>
+                  <input type="number" id="bkFreq" min="0" max="30" placeholder="e.g. 1 for daily, 7 for weekly">
+                  <div style="font-size:12px; color:var(--text4); margin-top:4px;">Set to <strong>0</strong> or leave blank to
+                    disable automated scheduled backups.</div>
+                </div>
+        
+                <button class="btn btn-primary" onclick="saveBackupConfig()">Save Automation Settings</button>
+              </div>
+        
+              <hr style="border-top:1px solid var(--border); margin:24px 0;">
+        
+              <h4 style="margin-top:0; margin-bottom:16px; color:var(--text);">Manual Controls</h4>
+              <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                <button class="btn btn-outline" onclick="window.location.href='/api/backup/download?token='+getToken()">⬇️
+                  Download Local Backup</button>
+                <button class="btn btn-outline" onclick="forceDriveBackup()" id="btnForceDrive" style="display:none;">☁️ Force
+                  Upload to Drive Now</button>
+                <button class="btn btn-danger" onclick="document.getElementById('restoreFile').click()">⬆️ Restore from JSON
+                  File</button>
+                <input type="file" id="restoreFile" style="display:none" accept=".json" onchange="doRestore(this)">
+              </div>
+        
+            </div>
           </div>
         </div>
 
@@ -3726,6 +3686,18 @@
     // APP SETUP & DATA FETCHING
     // ================================================================
     async function setupApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const authCode = urlParams.get('code');
+        if (authCode) {
+          window.history.replaceState({}, document.title, window.location.pathname); // Hide code from URL
+          try {
+            await api('POST', '/backup/connect', { code: authCode });
+            toast('Google Drive Connected Successfully!', 'success');
+            window.location.hash = '#backup'; // Force open backup tab
+          } catch (e) {
+            toast('Failed to connect Drive: ' + e.message, 'error');
+          }
+        }
       document.getElementById('sbAv').textContent = ME.name[0].toUpperCase();
       document.getElementById('sbNm').textContent = ME.name;
       document.getElementById('sbRl').textContent = roleLabel(ME.role);
@@ -4413,7 +4385,92 @@
         btn.textContent = '📥 Download to Device';
       }
     }
+  // --- OAUTH BACKUP LOGIC ---
+  async function loadBackupStatus() {
+    try {
+      const s = await api('GET', '/backup/status');
+      const cbox = document.getElementById('driveConfigBox');
+      const sbox = document.getElementById('driveStatusBox');
+      const fbtn = document.getElementById('btnForceDrive');
 
+      if (s.config && s.config.is_connected) {
+        sbox.innerHTML = `
+            <div style="font-size:18px; margin-bottom:12px;">✅ <strong>Connected to Google Drive</strong></div>
+            <div class="badge b-sky" style="font-size:14px; padding:6px 12px; margin-bottom:16px; letter-spacing:0.5px;">📧 ${s.config.google_email}</div><br>
+            <button class="btn btn-danger btn-sm" onclick="disconnectDrive()">Disconnect Account</button>
+          `;
+        cbox.style.display = 'block';
+        fbtn.style.display = 'inline-block';
+        document.getElementById('bkFolder').value = s.config.drive_folder_id || '';
+        document.getElementById('bkFreq').value = s.config.frequency_days || '';
+      } else {
+        sbox.innerHTML = `
+            <div style="font-size:18px; margin-bottom:12px; color:var(--text2)">❌ <strong>Google Drive Not Connected</strong></div>
+            <p style="font-size:14px; color:var(--text3); margin-bottom:20px; max-width:400px; margin-left:auto; margin-right:auto;">Connect your account to enable automated cloud backups directly to your own Google Drive folder.</p>
+            <button class="btn btn-primary" style="padding:10px 24px; font-size:15px;" onclick="connectDrive()">🔗 Connect Google Drive</button>
+          `;
+        cbox.style.display = 'none';
+        fbtn.style.display = 'none';
+      }
+    } catch (e) { console.error('Failed to load backup stats:', e); }
+  }
+
+  async function connectDrive() {
+    try {
+      const res = await api('GET', '/backup/auth-url');
+      window.location.href = res.url; // Redirect to Google Consent Screen
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  async function disconnectDrive() {
+    if (!confirm('Are you sure you want to disconnect Google Drive? Automated backups will stop.')) return;
+    try {
+      await api('POST', '/backup/disconnect');
+      toast('Disconnected from Google Drive', 'success');
+      loadBackupStatus();
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  async function saveBackupConfig() {
+    try {
+      await api('POST', '/backup/config', {
+        drive_folder_id: document.getElementById('bkFolder').value,
+        frequency_days: document.getElementById('bkFreq').value
+      });
+      toast('Automation settings saved!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  async function forceDriveBackup() {
+    const btn = document.getElementById('btnForceDrive');
+    btn.disabled = true; btn.textContent = '☁️ Uploading...';
+    try {
+      await api('POST', '/backup/drive');
+      toast('Backup successfully pushed to Drive!', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '☁️ Force Upload to Drive Now';
+    }
+  }
+
+  async function doRestore(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (!confirm('Are you sure you want to restore data from this file? Existing matching records will be safely skipped to prevent overwriting.')) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const res = await api('POST', '/backup/restore', data);
+        toast(`Restore complete! Imported ${res.imported.orders || 0} missing orders.`, 'success');
+        input.value = '';
+        setupApp(); // Reload tables
+      } catch (err) { toast(err.message, 'error'); }
+    };
+    reader.readAsText(file);
+  }
     async function driveBackup() {
       const btn = document.getElementById('btnDrive');
       const resultEl = document.getElementById('driveResult');

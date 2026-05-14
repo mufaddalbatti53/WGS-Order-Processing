@@ -4,7 +4,14 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 // ── Company ───────────────────────────────────────────────
-const CompanySchema = new Schema({
+const CompanySchema = new Schema({// OAuth Backup Configuration
+  backup_config: {
+    is_connected: { type: Boolean, default: false },
+    google_refresh_token: { type: String, default: '' },
+    google_email: { type: String, default: '' },
+    drive_folder_id: { type: String, default: '' },
+    frequency_days: { type: Number, default: 0 } // 0 = disabled, 1 = daily, etc.
+  },
   name: { type: String, required: true, trim: true },
   slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
   plan: { type: String, default: 'free' },
