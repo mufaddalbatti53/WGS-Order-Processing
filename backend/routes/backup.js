@@ -219,34 +219,13 @@ router.post('/restore', async (req, res) => {
     res.json({ message: 'Restore completed', imported: imp });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });// GET /api/backup/download (Local JSON Export)
-// This route does its own token verification from query param since it's a browser navigation (no headers)
+// Auth header is sent by the frontend fetch() call — req.user is already set by router.use(auth)
 router.get('/download', async (req, res) => {
   try {
-    const token = req.query.token;
-    const slug = req.query.slug;
-
-    if (!token || !slug) return res.status(401).json({ error: 'Missing auth parameters' });
-
-    // Verify JWT manually
-    const jwt = require('jsonwebtoken');
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    // Find the user and verify they are an admin
-    const user = await User.findById(payload.id).select('-password');
-    if (!user || !user.is_active || user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    // Find company by slug and ensure it matches the user's company
-    const company = await Company.findOne({ slug, _id: user.company_id });
+    const cid = req.company_id;
+    const company = await Company.findById(cid).lean();
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    const cid = company._id;
     const backupData = {
       meta: { company_name: company.name, exported_at: new Date().toISOString() },
       staff: await User.find({ company_id: cid }).select('-password').lean(),
@@ -257,7 +236,7 @@ router.get('/download', async (req, res) => {
     };
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=WGS_Backup_${slug}_${new Date().toISOString().split('T')[0]}.json`);
+    res.setHeader('Content-Disposition', `attachment; filename=WGS_Backup_${company.slug}_${new Date().toISOString().split('T')[0]}.json`);
     res.send(JSON.stringify(backupData, null, 2));
 
   } catch (e) {
