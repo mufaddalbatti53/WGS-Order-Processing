@@ -6,6 +6,51 @@ const { Company, User, Client, Order, Notification, Product } = require('../db/m
 const { auth, adminOnly } = require('../middleware/auth');
 const router = express.Router();
 
+// ── PUBLIC: Google OAuth callback (must be BEFORE auth middleware) ──────────
+// Google redirects here after the user approves Drive access.
+// Set GOOGLE_DRIVE_REDIRECT_URI=https://YOUR-BACKEND.onrender.com/api/backup/connect-callback
+router.get('/connect-callback', async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(error)}`);
+  if (!code || !state) return res.redirect(`${frontendUrl}#backup?drive_error=missing_params`);
+
+  try {
+    const decoded = Buffer.from(state, 'base64').toString('utf8');
+    const [companyId, userId] = decoded.split('|');
+
+    const user = await User.findOne({ _id: userId, company_id: companyId, role: 'admin', is_active: true });
+    if (!user) return res.redirect(`${frontendUrl}#backup?drive_error=unauthorized`);
+
+    const driveRedirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI ||
+      `${process.env.BACKEND_URL || 'https://wgs-order-processing.onrender.com'}/api/backup/connect-callback`;
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      driveRedirectUri
+    );
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+
+    await Company.findByIdAndUpdate(companyId, {
+      'backup_config.is_connected': true,
+      'backup_config.google_refresh_token': tokens.refresh_token,
+      'backup_config.google_email': userInfo.data.email,
+    });
+
+    return res.redirect(`${frontendUrl}#backup?drive_connected=1`);
+  } catch (e) {
+    console.error('[Drive OAuth Callback]', e.message);
+    return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(e.message)}`);
+  }
+});
+
+// ── All routes below require admin auth ─────────────────────────────────────
 router.use(auth);
 router.use(adminOnly);
 
@@ -44,54 +89,6 @@ router.get('/status', async (req, res) => {
     const company = await Company.findById(req.company_id).lean();
     res.json({ data: stats, config: company.backup_config || {} });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// 2b. GET /api/backup/connect-callback (Google OAuth callback for Drive)
-// Set GOOGLE_DRIVE_REDIRECT_URI=https://your-backend.onrender.com/api/backup/connect-callback
-router.get('/connect-callback', async (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-  const { code, error, state } = req.query;
-
-  if (error) {
-    return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(error)}`);
-  }
-  if (!code || !state) {
-    return res.redirect(`${frontendUrl}#backup?drive_error=missing_params`);
-  }
-
-  try {
-    // state contains: companyId|userId  (base64 encoded)
-    const decoded = Buffer.from(state, 'base64').toString('utf8');
-    const [companyId, userId] = decoded.split('|');
-
-    // Verify user is admin
-    const user = await User.findOne({ _id: userId, company_id: companyId, role: 'admin', is_active: true });
-    if (!user) {
-      return res.redirect(`${frontendUrl}#backup?drive_error=unauthorized`);
-    }
-
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_DRIVE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/backup/connect-callback`
-    );
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
-    const userInfo = await oauth2.userinfo.get();
-
-    await Company.findByIdAndUpdate(companyId, {
-      'backup_config.is_connected': true,
-      'backup_config.google_refresh_token': tokens.refresh_token,
-      'backup_config.google_email': userInfo.data.email,
-    });
-
-    return res.redirect(`${frontendUrl}#backup?drive_connected=1`);
-  } catch (e) {
-    console.error('[Drive OAuth Callback]', e.message);
-    return res.redirect(`${frontendUrl}#backup?drive_error=${encodeURIComponent(e.message)}`);
-  }
 });
 
 // 2. GET /api/backup/auth-url (Generate Google Login Link)

@@ -1293,6 +1293,11 @@
       border-color: var(--cyan);
     }
 
+    .fc-red {
+      background: var(--red-t);
+      border-color: var(--red);
+    }
+
     .flow-label {
       font-size: 11.5px;
       font-weight: 700;
@@ -2616,72 +2621,10 @@
             <div class="card mb-20">
               <div class="card-top">
                 <h3>📊 Order Flow Pipeline</h3>
-                <span style="font-size:12px;color:var(--text4)">End-to-end order lifecycle</span>
+                <span style="font-size:12px;color:var(--text4)">Click any stage to filter orders</span>
               </div>
               <div class="flow-wrap">
-                <div class="flow">
-                  <div class="flow-node">
-                    <div class="flow-circle fc-sky">📞</div>
-                    <div class="flow-label">Inquiry</div>
-                    <div class="flow-sublabel">Phone/Email/WhatsApp</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-blue">👔</div>
-                    <div class="flow-label">Team A</div>
-                    <div class="flow-sublabel">Order Received</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-yellow">💳</div>
-                    <div class="flow-label">Credit Check</div>
-                    <div class="flow-sublabel">Manual by Team A</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-purple">⚙️</div>
-                    <div class="flow-label">Partners A/B/C</div>
-                    <div class="flow-sublabel">Production</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-yellow">🔍</div>
-                    <div class="flow-label">Quality Check</div>
-                    <div class="flow-sublabel">Pass or Fail</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-cyan">💰</div>
-                    <div class="flow-label">Billing</div>
-                    <div class="flow-sublabel">Team B</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-cyan">🚚</div>
-                    <div class="flow-label">Dispatch</div>
-                    <div class="flow-sublabel">Team B</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px">
-                    <div class="flow-line"></div>
-                  </div>
-                  <div class="flow-node">
-                    <div class="flow-circle fc-green">✅</div>
-                    <div class="flow-label">Completed</div>
-                    <div class="flow-sublabel">Client Notified</div>
-                  </div>
-                </div>
+                <div class="flow" id="flowPipeline"></div>
               </div>
             </div>
     
@@ -3026,7 +2969,7 @@
     
                 <h4 style="margin-top:0; margin-bottom:16px; color:var(--text);">Manual Controls</h4>
                 <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                  <button class="btn btn-outline" onclick="window.location.href=API_BASE+'/backup/download?token='+getToken()+'&slug='+COMPANY_SLUG">⬇️
+                  <button class="btn btn-outline" onclick="downloadBackupJSON()">⬇️
                     Download Local Backup</button>
                   <button class="btn btn-outline" onclick="forceDriveBackup()" id="btnForceDrive" style="display:none;">☁️
                     Force
@@ -3280,12 +3223,12 @@
       </div>
     </div>
     <div class="overlay" id="profileM" onclick="if(event.target===this)closeM('profileM')">
-      <div class="modal" style="max-width:420px">
-        <div class="modal-hd">
+      <div class="modal" style="max-width:420px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div class="modal-hd" style="position:sticky;top:0;background:#fff;z-index:1;">
           <h3>👤 Edit Profile</h3>
           <button class="modal-close" onclick="closeM('profileM')">✕</button>
         </div>
-        <div class="modal-bd">
+        <div class="modal-bd" style="flex:1;overflow-y:auto;">
           <div style="text-align:center;margin-bottom:20px">
             <div id="proAv"
               style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--sky-d),var(--blue-700));color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:var(--shadow-md)">
@@ -3329,7 +3272,7 @@
             </div>
           </div>
         </div>
-        <div class="modal-ft" style="justify-content:space-between">
+        <div class="modal-ft" style="justify-content:space-between;position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border3);padding-top:12px;">
           <button class="btn btn-outline" onclick="closeM('profileM')">Cancel</button>
           <button class="btn btn-primary" onclick="saveProfile()">💾 Save Changes</button>
         </div>
@@ -3869,26 +3812,71 @@
         const r = ME.role; let stats = [];
         if (r === 'admin') {
           stats = [
-            { l: 'Total Orders', v: DB.orders.length, cls: 'sc-blue', i: '📋' },
-            { l: 'Pending Review', v: DB.orders.filter(o => ['received', 'credit_check'].includes(o.status)).length, cls: 'sc-yellow', i: '⏳' },
-            { l: 'In Production', v: DB.orders.filter(o => ['assigned', 'in_production', 'goods_received', 'quality_check'].includes(o.status)).length, cls: 'sc-purple', i: '⚙️' },
-            { l: 'Completed', v: DB.orders.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅' }
+            { l: 'Total Orders', v: DB.orders.length, cls: 'sc-blue', i: '📋', filter: '' },
+            { l: 'Pending Review', v: DB.orders.filter(o => ['received', 'credit_check'].includes(o.status)).length, cls: 'sc-yellow', i: '⏳', filter: 'received' },
+            { l: 'In Production', v: DB.orders.filter(o => ['assigned', 'in_production', 'goods_received', 'quality_check'].includes(o.status)).length, cls: 'sc-purple', i: '⚙️', filter: 'in_production' },
+            { l: 'Completed', v: DB.orders.filter(o => o.status === 'completed').length, cls: 'sc-green', i: '✅', filter: 'completed' }
           ];
         } else if (r === 'partner') {
           const mine = DB.orders.filter(o => o.partnerId === ME.id);
           stats = [
-            { l: 'New Assignments', v: mine.filter(o => o.status === 'assigned').length, cls: 'sc-yellow', i: '📌' },
-            { l: 'In Progress', v: mine.filter(o => o.status === 'in_production').length, cls: 'sc-purple', i: '⚙️' },
-            { l: 'QC Failed', v: mine.filter(o => o.status === 'quality_failed').length, cls: 'sc-red', i: '❌' }
+            { l: 'New Assignments', v: mine.filter(o => o.status === 'assigned').length, cls: 'sc-yellow', i: '📌', filter: 'assigned' },
+            { l: 'In Progress', v: mine.filter(o => o.status === 'in_production').length, cls: 'sc-purple', i: '⚙️', filter: 'in_production' },
+            { l: 'QC Failed', v: mine.filter(o => o.status === 'quality_failed').length, cls: 'sc-red', i: '❌', filter: 'quality_failed' }
           ];
         }
-        if (document.getElementById('dashStats')) document.getElementById('dashStats').innerHTML = stats.map(s => `<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
+        const el = document.getElementById('dashStats');
+        if (el) el.innerHTML = stats.map(s => `<div class="stat-card ${s.cls}" style="cursor:${s.filter !== undefined ? 'pointer' : 'default'}" onclick="${s.filter !== undefined ? `goOrdersFiltered('${s.filter}')` : ''}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
+        renderFlowPipeline();
+      }
+
+      function goOrdersFiltered(status) {
+        go('orders');
+        const fSel = document.getElementById('fStatus');
+        if (fSel) { fSel.value = status; renderOrders(); }
+      }
+
+      function renderFlowPipeline() {
+        const el = document.getElementById('flowPipeline');
+        if (!el) return;
+        const stages = [
+          { key: ['received'], icon: '👔', label: 'Received', sub: 'Team A', cls: 'fc-blue' },
+          { key: ['credit_check'], icon: '💳', label: 'Credit Check', sub: 'Manual review', cls: 'fc-yellow' },
+          { key: ['credit_rejected'], icon: '🚫', label: 'Credit Hold', sub: 'On hold', cls: 'fc-red' },
+          { key: ['assigned'], icon: '👷', label: 'Assigned', sub: 'Partner', cls: 'fc-purple' },
+          { key: ['in_production'], icon: '⚙️', label: 'Production', sub: 'In progress', cls: 'fc-purple' },
+          { key: ['goods_received'], icon: '📦', label: 'Goods In', sub: 'Back to Team A', cls: 'fc-blue' },
+          { key: ['quality_check','quality_failed'], icon: '🔍', label: 'Quality', sub: 'QC stage', cls: 'fc-yellow' },
+          { key: ['billing'], icon: '💰', label: 'Billing', sub: 'Team B', cls: 'fc-cyan' },
+          { key: ['dispatched','completed'], icon: '✅', label: 'Done', sub: 'Dispatched', cls: 'fc-green' },
+        ];
+        // build pipeline HTML — show live counts from DB
+        let html = '';
+        stages.forEach((s, i) => {
+          const count = DB.orders.filter(o => s.key.includes(o.status)).length;
+          const filterVal = s.key[0];
+          const hasOrders = count > 0;
+          html += `
+            <div class="flow-node" onclick="goOrdersFiltered('${filterVal}')" style="cursor:pointer">
+              <div class="flow-circle ${s.cls}" style="position:relative">
+                ${s.icon}
+                ${count > 0 ? `<span style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:30px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff">${count}</span>` : ''}
+              </div>
+              <div class="flow-label" style="color:${hasOrders ? 'var(--text)' : 'var(--text4)'};font-weight:${hasOrders ? '700' : '500'}">${s.label}</div>
+              <div class="flow-sublabel">${s.sub}</div>
+            </div>`;
+          if (i < stages.length - 1) {
+            html += `<div style="display:flex;flex-direction:column;align-items:center;padding:0 5px;margin-top:-22px"><div class="flow-line"></div></div>`;
+          }
+        });
+        el.innerHTML = html;
       }
 
       function renderDashRecent() {
         const orders = [...DB.orders].sort((a, b) => new Date(b.updated) - new Date(a.updated)).slice(0, 6);
         if (document.getElementById('dashTbl')) document.getElementById('dashTbl').innerHTML = `<thead><tr><th>Order #</th><th>Client</th><th>Status</th><th>Updated</th></tr></thead><tbody>${orders.map(o => `
             <tr onclick="viewOrder('${o.id}')"><td><span class="mono">${H(o.num)}</span></td><td><span class="strong">${H(o.cName)}</span></td><td><span class="badge ${STATUS_COLOR[o.status] || 'b-gray'}">${STATUS_LABEL[o.status] || o.status}</span></td><td><span class="muted">${timeAgo(o.updated)}</span></td></tr>`).join('')}</tbody>`;
+        renderFlowPipeline();
       }
 
       function renderOrders() {
@@ -4051,45 +4039,91 @@
 
       function buildActions(o) {
         let btns = [];
+
+        // ── STEP GUIDE: show a clear "what happens next" hint ──────────
+        const STEP_HINT = {
+          received:         '📋 Step 1 of 6 — Review credit status, then assign a production partner.',
+          credit_check:     '💳 Step 2 of 6 — Credit approved. Now assign a production partner.',
+          credit_rejected:  '🚫 Credit is on hold. Re-approve to continue.',
+          assigned:         '👷 Step 3 of 6 — Partner assigned. Waiting for production to start.',
+          in_production:    '⚙️ Step 3 of 6 — In production. Mark complete when goods are ready.',
+          goods_received:   '📦 Step 4 of 6 — Goods received. Start quality check.',
+          quality_check:    '🔍 Step 4 of 6 — Quality check in progress. Pass or fail the order.',
+          quality_failed:   '❌ QC failed. Reassign to partner for rework.',
+          billing:          '💰 Step 5 of 6 — QC passed. Bill the client and dispatch.',
+          dispatched:       '🚚 Step 6 of 6 — Dispatched. Marking as completed.',
+          completed:        '✅ Order complete. No further actions needed.',
+        };
+        const hint = STEP_HINT[o.status];
+
         if (ME.role === 'admin') {
+          // Received / Credit Check → approve, reject, OR directly assign
           if (['received', 'credit_check'].includes(o.status)) {
             btns.push({ key: 'approve_credit', lbl: '✅ Approve Credit', cls: 'btn-success' });
-            btns.push({ key: 'reject_credit', lbl: '❌ Reject / Hold', cls: 'btn-danger' });
-            btns.push({ key: '__assign', lbl: '👷 Assign Partner', cls: 'btn-primary' });
+            btns.push({ key: 'reject_credit',  lbl: '❌ Reject / Hold',  cls: 'btn-danger'  });
+            btns.push({ key: '__assign',        lbl: '👷 Assign Partner', cls: 'btn-primary' });
           }
-          if (o.status === 'assigned') btns.push({ key: 'start_production', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
-          if (o.status === 'in_production') btns.push({ key: 'goods_received', lbl: '📦 Mark Goods Received', cls: 'btn-primary' });
-          if (o.status === 'goods_received') btns.push({ key: 'start_qc', lbl: '🔍 Start Quality Check', cls: 'btn-primary' });
+          if (o.status === 'credit_rejected') {
+            btns.push({ key: 'approve_credit', lbl: '♻️ Re-approve Credit', cls: 'btn-warn' });
+          }
+          if (o.status === 'assigned') {
+            btns.push({ key: 'start_production', lbl: '⚙️ Mark Production Started', cls: 'btn-primary' });
+          }
+          if (o.status === 'in_production') {
+            btns.push({ key: 'goods_received', lbl: '📦 Mark Goods Received', cls: 'btn-primary' });
+          }
+          if (o.status === 'goods_received') {
+            btns.push({ key: 'start_qc', lbl: '🔍 Start Quality Check', cls: 'btn-primary' });
+          }
           if (o.status === 'quality_check') {
-            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
-            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
+            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass — Send to Billing', cls: 'btn-success' });
+            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail — Return to Partner', cls: 'btn-danger'  });
           }
-          if (o.status === 'quality_failed') btns.push({ key: '__assign', lbl: '👷 Reassign Partner', cls: 'btn-primary' });
-          if (o.status === 'billing') btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
-          if (o.status === 'credit_rejected') btns.push({ key: 'approve_credit', lbl: '♻️ Re-approve Credit', cls: 'btn-warn' });
+          if (o.status === 'quality_failed') {
+            btns.push({ key: '__assign', lbl: '👷 Reassign to Partner', cls: 'btn-primary' });
+          }
+          if (o.status === 'billing') {
+            btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch Order', cls: 'btn-success' });
+          }
+          // Admin can always delete
           btns.push({ key: 'delete_order', lbl: '🗑️ Delete Order', cls: 'btn-danger' });
         }
+
         if (ME.role === 'partner' && String(o.partnerId) === String(ME.id)) {
-          if (o.status === 'assigned') btns.push({ key: 'start_production', lbl: '⚙️ Start Production', cls: 'btn-primary' });
-          if (['in_production', 'quality_failed'].includes(o.status)) btns.push({ key: 'goods_received', lbl: '✅ Production Complete', cls: 'btn-success' });
-        }
-        if (ME.role === 'quality') {
-          if (['goods_received', 'quality_check'].includes(o.status)) {
-            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass', cls: 'btn-success' });
-            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail', cls: 'btn-danger' });
+          if (o.status === 'assigned') {
+            btns.push({ key: 'start_production', lbl: '⚙️ Start Production', cls: 'btn-primary' });
+          }
+          if (['in_production', 'quality_failed'].includes(o.status)) {
+            btns.push({ key: 'goods_received', lbl: '✅ Production Complete — Return Goods', cls: 'btn-success' });
           }
         }
-        if (ME.role === 'billing' && o.status === 'billing') {
-          btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch', cls: 'btn-success' });
+
+        if (ME.role === 'quality') {
+          if (o.status === 'goods_received') {
+            btns.push({ key: 'start_qc', lbl: '🔍 Start Quality Check', cls: 'btn-primary' });
+          }
+          if (o.status === 'quality_check') {
+            btns.push({ key: 'qc_pass', lbl: '✅ QC Pass — Send to Billing', cls: 'btn-success' });
+            btns.push({ key: 'qc_fail', lbl: '❌ QC Fail — Return to Partner', cls: 'btn-danger'  });
+          }
+        }
+
+        if (ME.role === 'billing') {
+          if (o.status === 'billing') {
+            btns.push({ key: 'dispatch', lbl: '🚚 Bill & Dispatch Order', cls: 'btn-success' });
+          }
         }
 
         const area = document.getElementById('actArea');
         if (!area) return;
+
+        let hintHTML = hint ? `<div style="width:100%;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--border3);border-radius:var(--r);font-size:13px;color:var(--text2);margin-bottom:8px">${hint}</div>` : '';
+
         if (!btns.length) {
-          area.innerHTML = `<p style="color:var(--text4);font-size:13.5px">No actions available for this order at your access level.</p>`;
+          area.innerHTML = hintHTML + `<p style="color:var(--text4);font-size:13.5px">No actions available at your access level for this status.</p>`;
           return;
         }
-        area.innerHTML = btns.map(b => `<button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>`).join('');
+        area.innerHTML = hintHTML + btns.map(b => `<button class="btn ${b.cls}" onclick="triggerAct('${b.key}')">${b.lbl}</button>`).join('');
       }
 
       function triggerAct(key) {
@@ -4387,6 +4421,40 @@
       // ================================================================
       // BACKUP & RESTORE
       // ================================================================
+      async function downloadBackupJSON() {
+        const btn = event.currentTarget;
+        const origText = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Preparing...'; }
+        try {
+          const token = getToken();
+          const res = await fetch(`${API_BASE}/backup/download?slug=${COMPANY_SLUG}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'x-company-slug': COMPANY_SLUG
+            }
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Download failed' }));
+            throw new Error(err.error || 'Download failed');
+          }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `WGS_Backup_${COMPANY_SLUG}_${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast('Backup downloaded!', 'success');
+        } catch (e) {
+          toast(e.message, 'error');
+        } finally {
+          if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        }
+      }
+
       async function loadBackupStatus() {
         try {
           const s = await api('GET', '/backup/status');
@@ -4407,7 +4475,13 @@
           } else {
             sbox.innerHTML = `
                   <div style="font-size:18px; margin-bottom:12px; color:var(--text2)">❌ <strong>Google Drive Not Connected</strong></div>
-                  <p style="font-size:14px; color:var(--text3); margin-bottom:20px; max-width:400px; margin-left:auto; margin-right:auto;">Connect your account to enable automated cloud backups directly to your own Google Drive folder.</p>
+                  <p style="font-size:14px; color:var(--text3); margin-bottom:16px; max-width:460px; margin-left:auto; margin-right:auto;">Connect your account to enable automated cloud backups directly to your Google Drive folder.</p>
+                  <div style="background:var(--yellow-t);border:1px solid var(--yellow-l);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--yellow);text-align:left;max-width:460px;margin-left:auto;margin-right:auto">
+                    <strong>⚙️ One-time setup required in Google Cloud Console:</strong><br>
+                    Add this exact URI to your OAuth app's <em>Authorized redirect URIs</em>:<br>
+                    <code style="background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all">${(window.API_BASE||'').replace('/api','')||'https://your-backend.onrender.com'}/api/backup/connect-callback</code><br><br>
+                    Also add <code style="background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;font-size:12px">GOOGLE_DRIVE_REDIRECT_URI</code> to your Render env vars with the same URL.
+                  </div>
                   <button class="btn btn-primary" style="padding:10px 24px; font-size:15px;" onclick="connectDrive()">🔗 Connect Google Drive</button>
                 `;
             cbox.style.display = 'none';
