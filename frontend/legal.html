@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy & Terms — WGS Order Processing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --blue: #1558cc;
+      --sky: #0284c7;
+      --sky-l: #e0f2fe;
+      --text: #0f2d52;
+      --text2: #2e5a84;
+      --text3: #4a7fa8;
+      --border: #d1e8f7;
+      --bg: #eef4fb;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #0284c7, #1558cc);
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(15, 45, 82, 0.15);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-logo {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .header-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 2px;
+    }
+
+    .header-badge {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* ── TABS ── */
+    .tab-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      padding: 16px 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(15, 45, 82, 0.06);
+    }
+
+    .tab-btn {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      background: transparent;
+      color: var(--text3);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn.active {
+      background: var(--sky-l);
+      color: var(--sky);
+      border-bottom-color: var(--sky);
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: var(--bg);
+      color: var(--text2);
+    }
+
+    /* ── CONTENT ── */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .doc-header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .doc-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .doc-meta {
+      font-size: 13px;
+      color: var(--text3);
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .doc-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── SECTIONS ── */
+    .section {
+      margin-bottom: 36px;
+    }
+
+    .section-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--sky-l);
+      color: var(--sky);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    .section p {
+      font-size: 14.5px;
+      color: var(--text2);
+      line-height: 1.8;
+      padding-left: 38px;
+    }
+
+    .section ul {
+      padding-left: 52px;
+      margin-top: 8px;
+    }
+
+    .section ul li {
+      font-size: 14.5px;
+      color: var(--text2);
+      line-height: 1.8;
+      margin-bottom: 4px;
+    }
+
+    .highlight-box {
+      background: var(--sky-l);
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 12px 0 12px 38px;
+      font-size: 13.5px;
+      color: var(--sky);
+      font-weight: 500;
+      line-height: 1.6;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 28px 40px;
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .footer-sub {
+      font-size: 12.5px;
+      color: var(--text3);
+      margin-bottom: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-size: 12.5px;
+      color: var(--sky);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-links a:hover {
+      color: var(--blue);
+    }
+
+    .footer-copy {
+      margin-top: 14px;
+      font-size: 11.5px;
+      color: var(--text3);
+    }
+
+    /* ── PAGE VISIBILITY ── */
+    .doc-page {
+      display: none;
+    }
+
+    .doc-page.active {
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 20px;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .tab-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+
+      .container {
+        padding: 32px 16px 60px;
+      }
+
+      .doc-title {
+        font-size: 24px;
+      }
+
+      footer {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-brand">
+      <div class="header-logo"><img src="WGS.png" alt="WGS Logo"
+          style="width:100%;height:100%;object-fit:contain;border-radius:10px;padding:2px"></div>
+      <div>
+        <div class="header-title">WGS Order Processing</div>
+        <div class="header-sub">Developed by Web Graphics Studio</div>
+      </div>
+    </div>
+    <div class="header-badge">Legal Documents</div>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('privacy')">🔒 Privacy Policy</button>
+    <button class="tab-btn" onclick="showTab('terms')">📋 Terms of Service</button>
+  </div>
+
+  <div class="container">
+
+    <!-- ══ PRIVACY POLICY ══ -->
+    <div class="doc-page active" id="page-privacy">
+      <div class="doc-header">
+        <div class="doc-title">🔒 Privacy Policy</div>
+        <div class="doc-meta">
+          <span>📅 Effective Date: May 1, 2026</span>
+          <span>🏢 Web Graphics Studio</span>
+          <span>🔄 Last Updated: May 2026</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">1</span>Introduction</div>
+        <p>Web Graphics Studio ("we", "our", or "us") operates the WGS Order Processing platform. This Privacy Policy
+          explains how we collect, use, and protect your personal information when you use our service. By using WGS
+          Order Processing, you agree to the collection and use of information in accordance with this policy.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">2</span>Information We Collect</div>
+        <p>We collect the following types of information:</p>
+        <ul>
+          <li><strong>Account Information:</strong> Name, email address, phone number, and password (stored as a secure
+            hash)</li>
+          <li><strong>Company Information:</strong> Company name, workspace slug, and role within your organization</li>
+          <li><strong>Order Data:</strong> Client names, contact details, order descriptions, amounts, and status
+            history</li>
+          <li><strong>Usage Data:</strong> Login timestamps, actions performed, and timeline entries</li>
+          <li><strong>Google Account Data:</strong> Email address (only if you connect Google Drive for backups)</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">3</span>How We Use Your Information</div>
+        <p>Your information is used exclusively to operate the WGS Order Processing platform:</p>
+        <ul>
+          <li>To authenticate you and maintain your session securely</li>
+          <li>To manage and track orders through the workflow pipeline</li>
+          <li>To send transactional notifications (order status updates via email or WhatsApp)</li>
+          <li>To enable automated cloud backups to your Google Drive</li>
+          <li>To provide role-based access control across your team</li>
+        </ul>
+        <div class="highlight-box">
+          🔒 We do <strong>not</strong> sell, rent, share, or use your data for advertising or marketing purposes.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">4</span>Data Storage & Security</div>
+        <p>All data is stored on MongoDB Atlas (a secure cloud database). We implement the following security measures:
+        </p>
+        <ul>
+          <li>Passwords hashed using bcrypt — never stored in plain text</li>
+          <li>Authentication via industry-standard JWT (JSON Web Tokens)</li>
+          <li>Role-based access control limiting what each user can see and do</li>
+          <li>HTTPS encryption for all data in transit</li>
+          <li>Company-scoped data isolation — each company's data is completely separated</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">5</span>Google Drive Integration</div>
+        <p>If you choose to connect Google Drive for backup functionality:</p>
+        <ul>
+          <li>We request only the <code
+              style="background:#f0f9ff;padding:1px 5px;border-radius:4px;font-size:13px">drive.file</code> scope —
+            access limited to files created by this app only</li>
+          <li>We do <strong>not</strong> access, read, or modify any other files in your Google Drive</li>
+          <li>Your Google OAuth refresh token is stored securely in our database</li>
+          <li>You can disconnect Google Drive at any time from the Backup & Restore settings</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">6</span>Notifications</div>
+        <p>By providing your email address or phone number, you consent to receiving transactional notifications related
+          to your orders — such as order status updates, dispatch confirmations, and quality check results. These are
+          operational notifications, not marketing communications. You may opt out by contacting your system
+          administrator.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">7</span>Data Retention</div>
+        <p>Your data is retained for as long as your company workspace remains active. You may request deletion of your
+          personal data or your entire company workspace by contacting your administrator or reaching us directly.
+          Backup files stored in your Google Drive are under your own Google account's control and can be deleted by you
+          at any time.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">8</span>Your Rights</div>
+        <p>You have the right to:</p>
+        <ul>
+          <li><strong>Access:</strong> Request a copy of your personal data (use the Backup & Restore → Download
+            feature)</li>
+          <li><strong>Correct:</strong> Update your profile information via the Edit Profile option</li>
+          <li><strong>Delete:</strong> Request deletion of your account and associated data</li>
+          <li><strong>Portability:</strong> Export all your company data in JSON format at any time</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">9</span>Contact Us</div>
+        <p>For privacy-related questions or requests, please contact:</p>
+        <div class="highlight-box">
+          <strong>Web Graphics Studio</strong><br>
+          📧 Email: info@webgraphicsstudio.com<br>
+          🌐 Developer of WGS Order Processing
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TERMS OF SERVICE ══ -->
+    <div class="doc-page" id="page-terms">
+      <div class="doc-header">
+        <div class="doc-title">📋 Terms of Service</div>
+        <div class="doc-meta">
+          <span>📅 Effective Date: May 1, 2026</span>
+          <span>🏢 Web Graphics Studio</span>
+          <span>🔄 Last Updated: May 2026</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">1</span>Acceptance of Terms</div>
+        <p>By accessing or using the WGS Order Processing platform ("the Service"), you agree to be bound by these Terms
+          of Service and our Privacy Policy. If you do not agree to these terms, you may not use the Service. These
+          terms apply to all users, including administrators, partners, quality control staff, and billing personnel.
+        </p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">2</span>Description of Service</div>
+        <p>WGS Order Processing is a multi-tenant, role-based order management platform developed by Web Graphics
+          Studio. It enables businesses to track orders through a defined workflow pipeline — from order receipt through
+          credit check, production, quality control, billing, and dispatch.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">3</span>Use of the Service</div>
+        <p>You agree to use the Service only for lawful business purposes. You may not:</p>
+        <ul>
+          <li>Use the Service to violate any applicable laws or regulations</li>
+          <li>Attempt to gain unauthorized access to any other company's data</li>
+          <li>Reverse-engineer, decompile, or copy any part of the platform</li>
+          <li>Use automated scripts or bots to interact with the Service</li>
+          <li>Enter false, misleading, or fraudulent order or client information</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">4</span>User Accounts & Security</div>
+        <p>You are responsible for maintaining the confidentiality of your login credentials. You are fully responsible
+          for all activity that occurs under your account. You must immediately notify your administrator if you suspect
+          unauthorized access. We are not liable for any loss or damage arising from your failure to protect your
+          account credentials.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">5</span>Data Accuracy</div>
+        <p>You are solely responsible for the accuracy, completeness, and legality of all data entered into the system —
+          including client information, order descriptions, and financial amounts. Web Graphics Studio is not liable for
+          any business decisions made based on data entered by users.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">6</span>Service Availability</div>
+        <p>We strive for high availability but do not guarantee uninterrupted, error-free access to the Service. The
+          platform may be temporarily unavailable due to scheduled maintenance, updates, infrastructure issues, or
+          factors beyond our control. We are not liable for any losses resulting from service interruptions.</p>
+        <div class="highlight-box">
+          ℹ️ The free hosting tier may have slower response times. Upgrading to a paid hosting plan improves performance
+          and uptime.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">7</span>Intellectual Property</div>
+        <p>The WGS Order Processing platform — including its design, source code, interface, and documentation — is the
+          intellectual property of Web Graphics Studio. You may not copy, modify, distribute, sell, or sublicense any
+          part of the platform without prior written permission from Web Graphics Studio.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">8</span>Limitation of Liability</div>
+        <p>To the fullest extent permitted by law, Web Graphics Studio shall not be liable for any indirect, incidental,
+          special, consequential, or punitive damages arising from your use of the Service — including but not limited
+          to loss of profits, data loss, or business interruption. Our total cumulative liability shall not exceed the
+          amount paid for the Service in the three months preceding the claim.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">9</span>Modifications to Terms</div>
+        <p>Web Graphics Studio reserves the right to modify these Terms of Service at any time. We will notify users of
+          significant changes. Your continued use of the Service after changes take effect constitutes your acceptance
+          of the revised terms. We recommend reviewing this page periodically.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">10</span>Termination</div>
+        <p>We reserve the right to suspend or terminate access to the Service at our discretion if these terms are
+          violated. Upon termination, you may export your data using the Backup & Restore feature before your access is
+          removed. You may also terminate your use of the Service at any time by contacting your administrator.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">11</span>Governing Law</div>
+        <p>These Terms of Service are governed by and construed in accordance with the laws of India. Any disputes
+          arising from these terms shall be subject to the exclusive jurisdiction of the courts in India.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="section-num">12</span>Contact Us</div>
+        <p>For questions about these Terms of Service, please contact:</p>
+        <div class="highlight-box">
+          <strong>Web Graphics Studio</strong><br>
+          📧 Email: info@webgraphicsstudio.com<br>
+          🌐 Developer of WGS Order Processing
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="footer-brand" style="display:flex;align-items:center;justify-content:center;gap:10px"><img src="WGS.png"
+        alt="WGS" style="width:32px;height:32px;object-fit:contain;border-radius:8px"> WGS Order Processing</div>
+    <div class="footer-sub">Developed by Web Graphics Studio</div>
+    <div class="footer-links">
+      <a href="#" onclick="showTab('privacy');return false;">Privacy Policy</a>
+      <a href="#" onclick="showTab('terms');return false;">Terms of Service</a>
+      <a href="mailto:info@webgraphicsstudio.com">Contact Us</a>
+    </div>
+    <div class="footer-copy">© 2026 Web Graphics Studio. All rights reserved.</div>
+  </footer>
+
+  <script>
+    function showTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'privacy') || (i === 1 && tab === 'terms'));
+      });
+      document.querySelectorAll('.doc-page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + tab).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+
+</html>

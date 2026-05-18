@@ -2590,6 +2590,17 @@
           <button class="btn-logout" onclick="doLogout()">
             <span>🚪</span> Sign Out
           </button>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border3);text-align:center">
+            <div style="font-size:10.5px;color:var(--text4);margin-bottom:6px;line-height:1.5">
+              Developed by<br>
+              <span style="font-weight:700;color:var(--text3);letter-spacing:0.2px">Web Graphics Studio</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+              <a href="legal.html#privacy" onclick="openLegalPage('privacy');return false;" style="font-size:10.5px;color:var(--sky-d);text-decoration:none;font-weight:600;transition:0.2s" onmouseover="this.style.color='var(--blue-700)'" onmouseout="this.style.color='var(--sky-d)'">Privacy Policy</a>
+              <span style="color:var(--border2);font-size:10px">•</span>
+              <a href="legal.html#terms" onclick="openLegalPage('terms');return false;" style="font-size:10.5px;color:var(--sky-d);text-decoration:none;font-weight:600;transition:0.2s" onmouseover="this.style.color='var(--blue-700)'" onmouseout="this.style.color='var(--sky-d)'">Terms of Service</a>
+            </div>
+          </div>
         </div>
       </aside>
     
@@ -4551,6 +4562,97 @@
           } catch (err) { toast(err.message, 'error'); }
         };
         reader.readAsText(file);
+      }
+
+      // ================================================================
+      // LEGAL PAGES (Privacy Policy & Terms of Service)
+      // ================================================================
+      function openLegalPage(type) {
+        const isPrivacy = type === 'privacy';
+        const title = isPrivacy ? '🔒 Privacy Policy' : '📋 Terms of Service';
+        const date = 'Effective Date: May 1, 2026';
+        const company = localStorage.getItem('of_company_name') || 'WGS Order Processing';
+
+        const privacyContent = `
+          <h4 style="color:var(--text);margin:0 0 4px">1. Information We Collect</h4>
+          <p>We collect information you provide directly: your name, email address, phone number, company name, and order details entered into the system. We also collect login activity timestamps and usage data necessary to operate the service.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">2. How We Use Your Information</h4>
+          <p>Your information is used solely to operate the WGS Order Processing platform — including managing orders, sending order status notifications via email or WhatsApp, and maintaining your account. We do not sell, rent, or share your personal data with third parties for marketing purposes.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">3. Data Storage & Security</h4>
+          <p>All data is stored securely on MongoDB Atlas (cloud database). Passwords are hashed using bcrypt and never stored in plain text. Access is restricted by role-based authentication using industry-standard JWT tokens.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">4. Notifications</h4>
+          <p>By providing your email or phone number, you consent to receiving order status updates and transactional notifications related to your orders. You may contact your administrator to opt out.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">5. Google Drive Integration</h4>
+          <p>If you connect Google Drive for backups, we request access only to files created by this application (drive.file scope). We do not access any other files in your Google Drive. Your Google OAuth token is stored securely and used only for backup operations.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">6. Data Retention</h4>
+          <p>Your data is retained for as long as your account is active. You may request deletion of your data by contacting your system administrator. Backup files stored on Google Drive are under your own Google account's control.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">7. Your Rights</h4>
+          <p>You have the right to access, correct, or request deletion of your personal information. Contact your administrator or reach us at the address below.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">8. Contact</h4>
+          <p>For privacy-related questions, contact:<br><strong>Web Graphics Studio</strong><br>Email: info@webgraphicsstudio.com</p>
+        `;
+
+        const termsContent = `
+          <h4 style="color:var(--text);margin:0 0 4px">1. Acceptance of Terms</h4>
+          <p>By accessing or using the WGS Order Processing platform, you agree to be bound by these Terms of Service. If you do not agree, do not use this service.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">2. Use of the Service</h4>
+          <p>This platform is provided for business order management purposes. You agree to use it only for lawful purposes and in accordance with these terms. You may not misuse, reverse-engineer, or attempt to gain unauthorized access to any part of the system.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">3. User Accounts</h4>
+          <p>You are responsible for maintaining the confidentiality of your login credentials. You are responsible for all activity that occurs under your account. Notify your administrator immediately of any unauthorized use of your account.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">4. Data Accuracy</h4>
+          <p>You are responsible for the accuracy of data you enter into the system, including client information, order details, and financial amounts. Web Graphics Studio is not liable for decisions made based on inaccurate data.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">5. Service Availability</h4>
+          <p>We strive for high availability but do not guarantee uninterrupted access. The service may be temporarily unavailable due to maintenance, updates, or factors beyond our control. We are not liable for losses resulting from service interruptions.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">6. Intellectual Property</h4>
+          <p>The WGS Order Processing platform, including its design, code, and content, is the property of Web Graphics Studio. You may not copy, modify, or distribute any part of the platform without written permission.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">7. Limitation of Liability</h4>
+          <p>Web Graphics Studio shall not be liable for any indirect, incidental, or consequential damages arising from your use of this platform. Our total liability shall not exceed the amount paid for the service in the preceding month.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">8. Modifications</h4>
+          <p>We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">9. Governing Law</h4>
+          <p>These terms are governed by the laws of India. Any disputes shall be resolved in the courts of jurisdiction where Web Graphics Studio operates.</p>
+
+          <h4 style="color:var(--text);margin:16px 0 4px">10. Contact</h4>
+          <p>For questions about these terms, contact:<br><strong>Web Graphics Studio</strong><br>Email: info@webgraphicsstudio.com</p>
+        `;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay show';
+        overlay.style.cssText = 'z-index:9999;align-items:flex-start;padding:20px';
+        overlay.innerHTML = `
+          <div class="modal" style="max-width:620px;max-height:90vh;display:flex;flex-direction:column;margin-top:20px">
+            <div class="modal-hd" style="position:sticky;top:0;background:#fff;z-index:1;flex-shrink:0">
+              <div>
+                <h3>${title}</h3>
+                <div style="font-size:11px;color:var(--text4);margin-top:2px">${date} · ${company}</div>
+              </div>
+              <button class="modal-close" onclick="this.closest('.overlay').remove()">✕</button>
+            </div>
+            <div class="modal-bd" style="overflow-y:auto;flex:1;font-size:13.5px;color:var(--text2);line-height:1.7">
+              ${isPrivacy ? privacyContent : termsContent}
+            </div>
+            <div class="modal-ft" style="flex-shrink:0;border-top:1px solid var(--border3);padding-top:12px;justify-content:space-between;align-items:center">
+              <div style="font-size:11.5px;color:var(--text4)">© 2026 Web Graphics Studio. All rights reserved.</div>
+              <button class="btn btn-primary btn-sm" onclick="this.closest('.overlay').remove()">Close</button>
+            </div>
+          </div>`;
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
       }
 
       // ================================================================
