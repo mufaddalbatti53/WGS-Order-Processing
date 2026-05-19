@@ -243,4 +243,109 @@ router.get('/download', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// 8. GET /api/backup/drive-files — List backup files from Google Drive
+router.get('/drive-files', async (req, res) => {
+  try {
+    const company = await Company.findById(req.company_id).lean();
+    const config = company.backup_config;
+    if (!config || !config.google_refresh_token) {
+      return res.status(400).json({ error: 'Google Drive not connected.' });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_DRIVE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/backup/connect-callback`
+    );
+    oauth2Client.setCredentials({ refresh_token: config.google_refresh_token });
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+    // Search for JSON files in the configured folder (or root)
+    const query = config.drive_folder_id
+      ? `'${config.drive_folder_id}' in parents and mimeType='application/json' and trashed=false`
+      : `mimeType='application/json' and trashed=false and name contains 'WGS_Backup'`;
+
+    const driveRes = await drive.files.list({
+      q: query,
+      fields: 'files(id, name, size, modifiedTime)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 20
+    });
+
+    const files = (driveRes.data.files || []).map(f => ({
+      id: f.id,
+      name: f.name,
+      size: f.size ? (parseInt(f.size) / 1024).toFixed(1) + ' KB' : 'Unknown',
+      modifiedTime: new Date(f.modifiedTime).toLocaleString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
+    }));
+
+    res.json({ files });
+  } catch (e) {
+    console.error('[Drive Files]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 9. POST /api/backup/restore-from-drive — Download a file from Drive and restore it
+router.post('/restore-from-drive', async (req, res) => {
+  try {
+    const { fileId } = req.body;
+    if (!fileId) return res.status(400).json({ error: 'fileId is required' });
+
+    const company = await Company.findById(req.company_id).lean();
+    const config = company.backup_config;
+    if (!config || !config.google_refresh_token) {
+      return res.status(400).json({ error: 'Google Drive not connected.' });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_DRIVE_REDIRECT_URI || `${process.env.BACKEND_URL}/api/backup/connect-callback`
+    );
+    oauth2Client.setCredentials({ refresh_token: config.google_refresh_token });
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+    // Download the file content from Drive
+    const fileRes = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'text' }
+    );
+
+    let data;
+    try {
+      data = typeof fileRes.data === 'string' ? JSON.parse(fileRes.data) : fileRes.data;
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid backup file format — could not parse JSON.' });
+    }
+
+    if (!data || !data.meta) {
+      return res.status(400).json({ error: 'Invalid backup file — missing metadata.' });
+    }
+
+    const imp = { orders: 0, clients: 0, staff: 0 };
+
+    const safeImport = async (Model, items, key) => {
+      if (!items || !Array.isArray(items)) return;
+      for (const item of items) {
+        item.company_id = req.company_id;
+        const exists = await Model.exists({ _id: item._id });
+        if (!exists) { await Model.create(item); imp[key] = (imp[key] || 0) + 1; }
+      }
+    };
+
+    await safeImport(User, data.staff, 'staff');
+    await safeImport(Client, data.clients, 'clients');
+    await safeImport(Order, data.orders, 'orders');
+
+    res.json({ message: 'Restore from Drive completed', imported: imp });
+  } catch (e) {
+    console.error('[Drive Restore]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
