@@ -2898,6 +2898,37 @@
           </div>
     
           <div class="page" id="pg-notif-log">
+
+            <!-- Test Notification Buttons -->
+            <div class="card" style="margin-bottom:18px">
+              <div class="card-top">
+                <h3>🧪 Test Notifications</h3>
+                <span style="font-size:12px;color:var(--text4)">Send a test to your own account</span>
+              </div>
+              <div style="padding:20px 22px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+
+                <!-- Email Test -->
+                <div style="flex:1;min-width:220px;background:var(--bg-panel);border:1px solid var(--border3);border-radius:var(--r);padding:16px">
+                  <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">📧 Email Test</div>
+                  <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Sends a test email to your admin email address to verify SMTP is working.</div>
+                  <button class="btn btn-outline btn-sm" id="btnTestEmail" onclick="testEmailNotif()">Send Test Email</button>
+                  <div id="emailTestResult" style="margin-top:8px;font-size:12.5px;display:none"></div>
+                </div>
+
+                <!-- WhatsApp Test -->
+                <div style="flex:1;min-width:220px;background:var(--bg-panel);border:1px solid var(--border3);border-radius:var(--r);padding:16px">
+                  <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">💬 WhatsApp Test</div>
+                  <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Sends a test WhatsApp message to the phone number below.</div>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="tel" id="waTestPhone" placeholder="+91 98765 43210" style="flex:1;min-width:140px;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:inherit;outline:none;background:#fff">
+                    <button class="btn btn-outline btn-sm" id="btnTestWA" onclick="testWANotif()">Send Test WA</button>
+                  </div>
+                  <div id="waTestResult" style="margin-top:8px;font-size:12.5px;display:none"></div>
+                </div>
+
+              </div>
+            </div>
+
             <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px" id="notifStats"></div>
     
             <div class="filter-bar">
@@ -4369,6 +4400,23 @@
       }
 
       function renderNotifLog() {
+        // Populate stats cards
+        const statsEl = document.getElementById('notifStats');
+        if (statsEl && DB.notifLog.length >= 0) {
+          const total    = DB.notifLog.length;
+          const sent     = DB.notifLog.filter(n => n.status === 'sent').length;
+          const failed   = DB.notifLog.filter(n => n.status === 'failed').length;
+          const emails   = DB.notifLog.filter(n => n.type === 'email').length;
+          const whatsapp = DB.notifLog.filter(n => n.type === 'whatsapp').length;
+          statsEl.innerHTML = [
+            { l: 'Total', v: total,    cls: 'sc-blue',   i: '🔔' },
+            { l: 'Sent',  v: sent,     cls: 'sc-green',  i: '✅' },
+            { l: 'Failed',v: failed,   cls: 'sc-red',    i: '❌' },
+            { l: 'Emails',v: emails,   cls: 'sc-cyan',   i: '📧' },
+            { l: 'WhatsApp',v: whatsapp,cls:'sc-purple', i: '💬' },
+          ].map(s => `<div class="stat-card ${s.cls}"><div class="sc-icon">${s.i}</div><div class="sc-num">${s.v}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
+        }
+
         const q = (document.getElementById('srchNotif')?.value || '').toLowerCase();
         const s = document.getElementById('fNotifStatus')?.value || '';
 
@@ -4565,6 +4613,63 @@
           } catch (err) { toast(err.message, 'error'); }
         };
         reader.readAsText(file);
+      }
+
+      // ================================================================
+      // NOTIFICATION TEST FUNCTIONS
+      // ================================================================
+      async function testEmailNotif() {
+        const btn = document.getElementById('btnTestEmail');
+        const result = document.getElementById('emailTestResult');
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+        result.style.display = 'none';
+        try {
+          const res = await api('POST', '/notifications/test-email');
+          result.style.display = 'block';
+          if (res.success) {
+            result.innerHTML = `<span style="color:var(--green)">✅ ${res.message}</span>`;
+            toast('Test email sent! Check your inbox.', 'success');
+          } else {
+            result.innerHTML = `<span style="color:var(--red)">❌ ${res.message}</span>`;
+            toast('Email failed — check SMTP settings in Render env vars.', 'error');
+          }
+        } catch (e) {
+          result.style.display = 'block';
+          result.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+          toast(e.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Send Test Email';
+        }
+      }
+
+      async function testWANotif() {
+        const btn = document.getElementById('btnTestWA');
+        const result = document.getElementById('waTestResult');
+        const phone = document.getElementById('waTestPhone').value.trim();
+        if (!phone) return toast('Enter a phone number first', 'error');
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+        result.style.display = 'none';
+        try {
+          const res = await api('POST', '/notifications/test-whatsapp', { phone });
+          result.style.display = 'block';
+          if (res.success) {
+            result.innerHTML = `<span style="color:var(--green)">✅ ${res.message}</span>`;
+            toast('Test WhatsApp sent! Check your phone.', 'success');
+          } else {
+            result.innerHTML = `<span style="color:var(--red)">❌ ${res.message}</span>`;
+            toast('WhatsApp failed — check WA_PHONE_NUMBER_ID and WA_ACCESS_TOKEN in Render.', 'error');
+          }
+        } catch (e) {
+          result.style.display = 'block';
+          result.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+          toast(e.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Send Test WA';
+        }
       }
 
       // ================================================================
