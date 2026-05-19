@@ -60,8 +60,7 @@ router.post('/test-whatsapp', async (req, res) => {
       phone,
       '✅ *WGS Order Processing*\n\nWhatsApp notifications are working! This is a test message.',
       req.company_id,
-      null,
-      'TEST'
+      null
     );
     res.json({
       success: ok,

@@ -104,4 +104,4 @@ async function notifyClientEmail(order, stage, extraInfo = '') {
   return success ? `Email sent to ${order.client_email}: ${subject}` : null;
 }
 
-module.exports = { notifyClientEmail, logNotif };
+module.exports = { notifyClientEmail, logNotif, sendEmail };
