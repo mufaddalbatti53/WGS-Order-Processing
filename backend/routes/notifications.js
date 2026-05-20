@@ -34,19 +34,55 @@ router.get('/', async (req, res) => {
 
 // Test email
 router.post('/test-email', async (req, res) => {
+  // Check env vars first
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const smtpSecure = process.env.SMTP_SECURE === 'true';
+
+  if (!smtpUser) return res.status(400).json({ success: false, message: 'SMTP_USER is not set in environment variables.' });
+  if (!smtpPass) return res.status(400).json({ success: false, message: 'SMTP_PASS is not set in environment variables.' });
+  if (smtpPass.length < 10) return res.status(400).json({ success: false, message: `SMTP_PASS looks too short (${smtpPass.length} chars). Gmail App Passwords are 16 characters.` });
+
   try {
-    const { sendEmail } = require('../services/notify');
-    const ok = await sendEmail(
-      req.user.email,
-      'WGS Order Processing — Email Test',
-      '<p>This is a test email. Email notifications are working! ✅</p>',
-      req.company_id
-    );
-    res.json({
-      success: ok,
-      message: ok ? `Test email sent to ${req.user.email}` : 'Failed — check SMTP config in .env',
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: { user: smtpUser, pass: smtpPass },
+      tls: { rejectUnauthorized: false },
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+
+    // Verify connection first
+    await transporter.verify();
+
+    // Send test email
+    await transporter.sendMail({
+      from: `"${process.env.SMTP_FROM_NAME || 'WGS Order Processing'}" <${smtpUser}>`,
+      to: req.user.email,
+      subject: 'WGS Order Processing — Email Test ✅',
+      html: '<p>This is a test email. Email notifications are working! ✅</p><p>SMTP is configured correctly.</p>',
+    });
+
+    res.json({ success: true, message: `Test email sent to ${req.user.email}` });
+
+  } catch (e) {
+    // Return the real nodemailer error
+    let hint = '';
+    const msg = e.message || '';
+    if (msg.includes('Invalid login') || msg.includes('Username and Password not accepted')) {
+      hint = ' → Your App Password is wrong or expired. Generate a new one at myaccount.google.com/apppasswords';
+    } else if (msg.includes('ECONNREFUSED') || msg.includes('connect')) {
+      hint = ` → Cannot connect to ${smtpHost}:${smtpPort}. Check SMTP_HOST and SMTP_PORT.`;
+    } else if (msg.includes('ETIMEDOUT') || msg.includes('timeout')) {
+      hint = ' → Connection timed out. Try SMTP_PORT=465 with SMTP_SECURE=true instead.';
+    } else if (msg.includes('self signed') || msg.includes('certificate')) {
+      hint = ' → TLS certificate issue. Already handled — try again.';
+    }
+    res.json({ success: false, message: `${msg}${hint}` });
+  }
 });
 
 // Test WhatsApp
