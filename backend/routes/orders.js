@@ -234,8 +234,13 @@ router.post('/:id/action', async (req, res) => {
         order.status = 'dispatched'; order.amount = fa; order.dispatch_info = di; order.billing_notes = notes || '';
         addTimeline(order, 'dispatched', '🚚 Order billed and dispatched.', u._id, uName, di);
 
-        // Notify Client with full details
-        const d_eRes = await notifyClientEmail(order, 'dispatched', di);
+        // Build attachment object from bill file if uploaded
+        const attachment = (req.body.billFileBase64 && req.body.billFileName)
+          ? { content: req.body.billFileBase64.split(',').pop(), name: req.body.billFileName }
+          : null;
+
+        // Notify client + admin with full summary and bill attachment
+        const d_eRes = await notifyClientEmail(order, 'dispatched', di, attachment);
         const d_wRes = await notifyClientWA(order, 'dispatched', di);
         if (d_eRes) notifMsg += d_eRes + '. ';
         if (d_wRes) notifMsg += d_wRes + '.';
