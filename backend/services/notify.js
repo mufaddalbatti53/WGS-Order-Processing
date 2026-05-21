@@ -1,18 +1,49 @@
-// services/notify.js — Email only, Client-facing only
-const nodemailer = require('nodemailer');
+// services/notify.js — Email via Brevo HTTP API (no IP restrictions) or SMTP fallback
 const { Notification } = require('../db/models');
+const axios = require('axios');
 
-let transporter = null;
-function getTransporter() {
-  if (transporter) return transporter;
-  transporter = nodemailer.createTransport({
+// ── Send via Brevo HTTP API (recommended — no IP whitelist needed) ──────────
+async function sendViaBrevoAPI(to, subject, htmlBody) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return false;
+
+  try {
+    await axios.post('https://api.brevo.com/v3/smtp/email', {
+      sender: {
+        name: process.env.SMTP_FROM_NAME || 'WGS Order Processing',
+        email: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
+      },
+      to: [{ email: to }],
+      subject,
+      htmlContent: htmlBody
+    }, {
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+    return true;
+  } catch (e) {
+    console.error('[Brevo API] Error:', e.response?.data || e.message);
+    return false;
+  }
+}
+
+// ── Send via SMTP fallback (if BREVO_API_KEY not set) ──────────────────────
+async function sendViaSMTP(to, subject, htmlBody) {
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     tls: { rejectUnauthorized: false },
   });
-  return transporter;
+  await transporter.sendMail({
+    from: `"${process.env.SMTP_FROM_NAME || 'WGS'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+    to, subject, html: htmlBody
+  });
+  return true;
 }
 
 function emailHTML(title, bodyHTML) {
@@ -48,16 +79,32 @@ async function logNotif({ companyId, orderId, type, recipient, subject, message,
 }
 
 async function sendEmail(to, subject, bodyHTML, companyId = null, orderId = null) {
-  if (!to || !process.env.SMTP_USER) return false;
+  if (!to) return false;
+  // Must have either Brevo API key or SMTP credentials
+  if (!process.env.BREVO_API_KEY && !process.env.SMTP_USER) return false;
+
   const logId = await logNotif({ companyId, orderId, type: 'email', recipient: to, subject, message: bodyHTML, status: 'pending' });
   try {
-    await getTransporter().sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'WGS'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
-      to, subject, html: emailHTML(subject, bodyHTML),
-    });
-    if (logId) await Notification.findByIdAndUpdate(logId, { status: 'sent', sent_at: new Date() });
-    return true;
+    const html = emailHTML(subject, bodyHTML);
+    let ok = false;
+
+    // Try Brevo API first (no IP restrictions)
+    if (process.env.BREVO_API_KEY) {
+      ok = await sendViaBrevoAPI(to, subject, html);
+    }
+    // Fallback to SMTP if API not configured or failed
+    if (!ok && process.env.SMTP_USER) {
+      ok = await sendViaSMTP(to, subject, html);
+    }
+
+    if (ok) {
+      if (logId) await Notification.findByIdAndUpdate(logId, { status: 'sent', sent_at: new Date() });
+      return true;
+    } else {
+      throw new Error('All email providers failed');
+    }
   } catch (err) {
+    console.error('[Email] Failed:', err.message);
     if (logId) await Notification.findByIdAndUpdate(logId, { status: 'failed', error_msg: err.message });
     return false;
   }
